@@ -4,12 +4,10 @@ import matplotlib.pyplot as plt
 import re
 import pyranges
 import sys
-import sklearn as sk
-from sklearn.tree import DecisionTreeClassifier
 from scipy.ndimage import gaussian_filter1d
 import math
-
-
+from scipy.signal import find_peaks
+from distutils.util import strtobool
 
 def main():
     read_command_line()
@@ -24,13 +22,14 @@ def main():
     find_search_sites()
     find_search_site_sizes()
     merge_annotation_expression()
-    proximal_enhancer_search()
-    count_proximal_enhancers()
-    find_proximal_enhancer_densities()
-    #find_nearby_genes()
-    #data_exploration()
+    filter_hap1_expression()
+    find_nearby_genes()
+    find_nearby_enhancers()
+    count_nearby_enhancers()
+    find_nearby_enhancer_densities()
+    data_exploration()
     gene_scoring()
-    convolution()
+    enhancer_convolution()
 
 def read_command_line():
     print("Reading command line...")
@@ -41,7 +40,7 @@ def read_command_line():
     
     global cell_line_of_interest
     global chromosomes_of_interest
-    global epigenetic_flags_of_interest
+    global epigenetic_flag_of_interest
     
     global search_type
     global search_within_gene
@@ -57,10 +56,16 @@ def read_command_line():
     global kernel_size_type
     global absolute_kernel_size
     global relative_kernel_size
+    global kernel_shape
     global relative_kernel_sigma
+    
+    global min_absolute_enhancer_cluster_width
+    global min_enhancer_cluster_prominence
     
     global sigmoidal_slope
     global sigmoidal_midpoint
+    global hap1_threshold
+    global interferring_gene_overlaps
     
     if len(sys.argv) == 2:
         input_arguments = sys.argv[1]
@@ -71,11 +76,11 @@ def read_command_line():
             cell_lines_expression_reference = re.findall("(?<= = ).*", input_file.readline())[0]
         
             cell_line_of_interest = re.findall("(?<= = ).*", input_file.readline())[0]
-            chromosomes_of_interest = re.findall("(?<= = ).*", input_file.readline())[0]
-            epigenetic_flags_of_interest = re.findall("(?<= = ).*", input_file.readline())[0]
+            chromosomes_of_interest = (re.findall("(?<= = ).*", input_file.readline())[0]).split(sep = ",")
+            epigenetic_flag_of_interest = re.findall("(?<= = ).*", input_file.readline())[0]
         
             search_type = re.findall("(?<= = ).*", input_file.readline())[0]
-            search_within_gene = re.findall("(?<= = ).*", input_file.readline())[0]
+            search_within_gene = strtobool(re.findall("(?<= = ).*", input_file.readline())[0])
             upstream_search = int(re.findall("(?<= = ).*", input_file.readline())[0])
             downstream_search = int(re.findall("(?<= = ).*", input_file.readline())[0])
         
@@ -88,10 +93,16 @@ def read_command_line():
             kernel_size_type = re.findall("(?<= = ).*", input_file.readline())[0]
             absolute_kernel_size = float(re.findall("(?<= = ).*", input_file.readline())[0])
             relative_kernel_size = float(re.findall("(?<= = ).*", input_file.readline())[0])
+            kernel_shape = re.findall("(?<= = ).*", input_file.readline())[0]
             relative_kernel_sigma = float(re.findall("(?<= = ).*", input_file.readline())[0])
+            
+            min_absolute_enhancer_cluster_width = float(re.findall("(?<= = ).*", input_file.readline())[0])
+            min_enhancer_cluster_prominence = float(re.findall("(?<= = ).*", input_file.readline())[0])
             
             sigmoidal_slope = float(re.findall("(?<= = ).*", input_file.readline())[0])
             sigmoidal_midpoint = float(re.findall("(?<= = ).*", input_file.readline())[0])
+            hap1_threshold = float(re.findall("(?<= = ).*", input_file.readline())[0])
+            interferring_gene_overlaps = strtobool(re.findall("(?<= = ).*", input_file.readline())[0])
         
     else:
         results_directory = sys.argv[1]
@@ -100,7 +111,7 @@ def read_command_line():
         cell_lines_expression_reference = sys.argv[4]
         
         cell_line_of_interest = sys.argv[5]
-        epigenetic_flags_of_interest = sys.argv[6]
+        epigenetic_flag_of_interest = sys.argv[6]
         
         search_type = sys.argv[7]
         search_within_gene = sys.argv[8]
@@ -199,7 +210,6 @@ def find_gene_sizes():
     print("Finding gene sizes...")
     global genes
     genes["Gene_size"] = genes["End"] - genes["Start"]
-    
 
 def find_search_sites():
     global genes, genes_search
@@ -232,13 +242,6 @@ def find_search_sites():
         #genes_search["End"] = genes_search.apply(lambda gene : gene.End + downstream_search if gene.Strand == "+" else gene.End + upstream_search, axis = 1)
         #genes_search["Start"] = genes_search.apply(lambda gene : 0 if gene.Start < 0 else gene.Start, axis = 1)
 
-#def reduce_search_sites_due_to_interferring_genes(gene, genes, genes_search):
-#    interferring_genes = genes.loc[genes["Chromosome"] ==  gene["Chromosome"]]
-#    search_start = genes_
-#    search_end = genes_
-#    interferring_genes = interferring_genes.loc[genes_search["Startintereferring_genes["Start"]]
-#    genes.loc[genes["End"] <=  genes_search["Gene_name"]]
-
 def find_search_site_sizes():
     print("Finding search site sizes...")
     global genes_search
@@ -257,7 +260,7 @@ def find_search_site_sizes():
     #print(genes.merge(genes_search.groupby("Gene_name")["Search_size"].transform("sum").sort_values("Gene_name"), on = "Gene_name"))
     #print(genes_search.assign(Search_size = genes_search.groupby()["Search_size"].transform("sum").sort_values("Gene_name")))
 
-def proximal_enhancer_search():
+def find_nearby_enhancers():
     print("Searching for proximal enhancers...")
     global regulatory_elements, overlaps, genes_search, genes
     search_pr = pyranges.PyRanges(genes_search)
@@ -265,15 +268,16 @@ def proximal_enhancer_search():
     overlaps = search_pr.intersect(regulatory_elements_pr, strandedness = False)
     overlaps = overlaps.df
     
-def count_proximal_enhancers():
+def count_nearby_enhancers():
     print("Counting proximal enhancers...")
     global overlaps, genes
     genes = pd.merge(genes, overlaps.groupby("Gene_name").size().reset_index(name = "Enhancer_count"), on = "Gene_name", how = "inner")
     
-def find_proximal_enhancer_densities():
+def find_nearby_enhancer_densities():
     global genes
     print("Finding proximal enhancer densities...")
     overlaps["Enhancer_proportion"] = (overlaps["End"] - overlaps["Start"]) / overlaps["Search_size"]
+    print(overlaps)
     genes = pd.merge(genes, overlaps.groupby(["Gene_name"], as_index = False)["Enhancer_proportion"].sum().reset_index(), on = "Gene_name", how = "inner")
 
 def data_exploration():
@@ -329,105 +333,69 @@ def gene_scoring():
     genes = genes.sort_values("Interest_score", ascending = False)
     genes[["Gene_name", "Std", "HAP1", "Enhancer_count", "Enhancer_proportion", "Gene_size", "Interest_score"]].to_csv(results_directory + "gene_scoring.tsv", sep = "\t")
     
-def transform_hap1_expression():
+def filter_hap1_expression():
+    print("Filtering genes by HAP1 expression...")
     global genes
-    genes["HAP1_score"] = 1 - (1 / (1 + math.exp((sigmoidal_slope * genes["HAP1"]) - (sigmoidal_midpoint * sigmoidal_slope))))
+    #genes["HAP1_score"] = 1 - (1 / (1 + math.exp((sigmoidal_slope * genes["HAP1"]) - (sigmoidal_midpoint * sigmoidal_slope))))
+    genes["HAP1_normalised"] =  genes.apply(lambda gene : 1 - (1 / (1 + math.exp((sigmoidal_slope * gene.HAP1) - (sigmoidal_midpoint * sigmoidal_slope)))), axis = 1)
     
 def find_nearby_genes():
     print("Finding nearby genes...")
     global genes_search, genes
     search_pr = pyranges.PyRanges(genes_search)
-    genes_pr = pyranges.PyRanges(genes)
-    gene_overlaps = search_pr.intersect(genes_pr, strandedness = False)
-    gene_overlaps = gene_overlaps.df
-    print(gene_overlaps)
-    print(genes)
+    genes_pr = pyranges.PyRanges(genes.loc[genes["HAP1_normalised"] > hap1_threshold])
+    genes_nearest_upstream_pr = genes_pr.nearest(genes_pr, how = "upstream", suffix = "_upstream_interferrer", overlap = interferring_gene_overlaps)
+    genes_nearest_downstream_pr = genes_pr.nearest(genes_pr, how = "downstream", suffix = "_downstream_interferrer", overlap = interferring_gene_overlaps)
+    genes_nearest_upstream = genes_nearest_upstream_pr.df
+    genes_nearest_downstream = genes_nearest_downstream_pr.df
+    genes_search = pd.merge(genes_search, genes_nearest_upstream.loc[:, ["Gene_name", "Start_upstream_interferrer", "End_upstream_interferrer", "Gene_name_upstream_interferrer"]], on = "Gene_name", how = "inner")
+    genes_search = pd.merge(genes_search, genes_nearest_downstream.loc[:, ["Gene_name", "Start_downstream_interferrer", "End_downstream_interferrer", "Gene_name_downstream_interferrer"]], on = "Gene_name", how = "inner")
+    print(genes_search[["Gene_name", "Start", "End"]])
+    genes_search = genes_search.loc[genes_search["End_upstream_interferrer"] < genes_search["Start_downstream_interferrer"]]
+    print(genes_search[["Gene_name", "Start", "End"]])
+    genes_search["Start"] = genes_search["End_upstream_interferrer"].astype(int)
+    genes_search["End"] = genes_search["Start_downstream_interferrer"].astype(int)
+    print(genes_search[["Gene_name", "Start", "End"]])
 
-def convolution():
-    print("Convolving...")
-    global genes_search, overlaps
+def enhancer_convolution():
+    print("Convolving enhancers...")
+    global genes_search, overlaps, gene_overlaps
     for index, gene in genes_search.iterrows():
-        window = get_guassian_kernel(int((relative_kernel_size * (gene.End - gene.Start))), int(relative_kernel_sigma * (gene.End - gene.Start)))
+        print("Convolving " + gene["Gene_name"])
+        window = get_kernel(int((relative_kernel_size * (gene.End - gene.Start))), int(relative_kernel_sigma * (gene.End - gene.Start)))
         gene_basewise = np.zeros((gene.End - gene.Start), dtype = int)
         basewise = np.arange(gene.Start, gene.End)
-        gene_overlaps = overlaps.loc[overlaps["Gene_name"] == gene["Gene_name"]]
-        for index, overlap in gene_overlaps.iterrows():
+        gene_specific_enhancer_overlaps = overlaps.loc[overlaps["Gene_name"] == gene["Gene_name"]]
+        for index, overlap in gene_specific_enhancer_overlaps.iterrows():
             overlap_basewise = np.where(np.logical_and(overlap.Start <= basewise, basewise <= overlap.End), 1, 0)
             gene_basewise = np.where(overlap_basewise == 1, 1, gene_basewise)
         step_x = np.arange(gene.Start, gene.End)
-        print("Starting convolution")
         gene_convolution = np.convolve(window, gene_basewise)
-        print("Convolution finished")
         conv_x = np.arange((gene.Start - (len(window) // 2)), (gene.Start - (len(window) // 2) + len(gene_convolution)))
+        
+        peaks, _ = find_peaks(x = gene_convolution, width = min_absolute_enhancer_cluster_width, prominence = (min_enhancer_cluster_prominence, None))
         
         figure, axis = plt.subplots(2, 1, figsize = (18.5, 10.5))
         axis[0].plot(step_x, gene_basewise, c = "green")
         axis[0].set(xlabel = "Coordinate on chromosome " + gene["Chromosome"])
-        axis[1].plot(conv_x, gene_convolution, c = "orange")
-        axis[1].set(xlabel = "Coordinate on chromosome " + gene["Chromosome"])
+        axis[0].plot(conv_x, gene_convolution, c = "orange")
+        axis[0].plot((peaks + (gene.Start - ((len(conv_x) - len(step_x)) / 2))), gene_convolution[peaks], "x")
+        #axis[0].plot(conv_x, peaks, "x")
+        #axis[0].set(xlabel = "Coordinate on chromosome " + gene["Chromosome"])
         
         plt.savefig(results_directory + gene["Gene_name"] + "_enhancer_convolution")
         plt.close()
 
-def get_guassian_kernel(size, sigma):
-    kernel = np.zeros(size)
-    print(size)
-    print(np.count_nonzero(kernel))
-    np.put(kernel, (size // 2), 1)
-    print(np.count_nonzero(kernel))
-    kernel = gaussian_filter1d(kernel, sigma)
-    print(np.count_nonzero(kernel))
-    return kernel
+def get_kernel(size, sigma):
+    if kernel_shape == "flat":
+        kernel = np.ones(size)
+        return kernel
+    elif kernel_shape == "guassian":
+        kernel = np.zeros(size)
+        np.put(kernel, (size // 2), 10)
+        kernel = gaussian_filter1d(kernel, sigma)
+        return kernel
     
-    #genes_search["Basewise_0s"] = genes_search.apply(lambda gene_search_region : np.zeros(gene_search_region.Search_size, dtype = int), axis = 1)
-    #overlaps["Basewise_1s"] = overlaps.apply(lambda overlap : np.ones((overlap.End - overlap.Start), dtype = int), axis = 1)
-    #print(genes_search)
-    #print(overlaps)
-    #overlaps = overlaps.merge(genes_search, how = "left")
-    #print(overlaps)
-    
-#def convolution():
-    #print("Convolving...")
-    #global overlaps, genes
-    #print(genes)
-    #print(overlaps)
-    #overlaps = overlaps.drop(["Strand"], axis = 1)
-    #overlaps["Base_labels"] = np.nan
-    #overlaps = overlaps.sort_values(["Chromosome", "Start"]).head(100)
-    #print(overlaps)
-    #genes = genes.sort_values(["Chromosome", "Start"]).head(10)
-    #print(genes)
-    #for gene in genes["Gene_name"]:
-    #    convolve_gene(gene, genes, overlaps)
-    
-    #enhancer_convolution = np.convolve(window, enhancer_ranges)
-    
-#def convolve_gene(gene, genes, genes_search):
-    #base_labels = np.zeros((2, gene["Search_size"]))
-    #np.put(base_labels, [0, ])
-    #print(overlaps.loc[overlaps["Gene_name"] == gene])
-    #print(overlaps.loc[overlaps["Gene_name"] == gene, "Base_labels"])
-    #overlap_coordinate_ranges = np.empty
-    #for index, overlap in overlaps.loc[overlaps["Gene_name"] == gene].iterrows():
-    #    overlap_coordinate_ranges = np.append(overlap_coordinate_ranges, np.arange(overlap.Start, (overlap.End + 1), 1))
-    #overlap_coordinate_ranges[1:]
-    #print("Debug1")
-    #print(genes_search.loc[genes_search["Gene_name"] == gene])
-    #print(genes_search.loc[genes_search["Gene_name"] == gene]["Start"])
-    #overlaps.loc[overlaps["Gene_name"] == gene, "Base_labels"] = overlaps.loc[overlaps["Gene_name"] == gene].apply(lambda overlap : np.arange(overlap.Start, overlap.End, 1), axis = 1)
-    #gene_coordinate_range = np.arange(genes_search.loc[genes_search["Gene_name"] == gene].Start, genes_search.loc[genes_search["Gene_name"] == gene].End, 1)
-    #print(overlaps.loc[overlaps["Gene_name"] == gene]["Base_labels"])
-    #print(gene_coordinate_range)
-    #print(overlap_coordinate_ranges)
-    #print(np.isin(gene_coordinate_range, overlap_coordinate_ranges))
-    #print(overlaps.loc[overlaps["Gene_name"] == gene])
-    
-    
-    #for overlap in overlaps.loc[overlaps["Gene_name"] == gene]:
-    #    overlap
-    #gene["Base_labels"] = gene.apply(lambda overlap : [*range(gene.Start, gene.End, 1)], axis = 1)
-    #gene = gene.drop(["Start", "End"], axis = 1)
-    #enhancer_convolution = np.convolve(window, gene["Base_labels"].to_numpy())
 
 if __name__ == "__main__":
     main()
