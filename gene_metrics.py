@@ -8,6 +8,7 @@ from scipy.ndimage import gaussian_filter1d
 import math
 from scipy.signal import find_peaks
 from distutils.util import strtobool
+import hashlib
 
 def main():
     read_command_line()
@@ -29,18 +30,22 @@ def main():
     find_nearby_enhancer_densities()
     data_exploration()
     gene_scoring()
+    export_gene_scores_report()
     enhancer_convolution()
 
 def read_command_line():
     print("Reading command line...")
+    global input_arguments
+    
     global results_directory
     global gene_annotation_reference
     global regulatory_elements_reference
     global cell_lines_expression_reference
+    global gene_prioritisation_report_directory
     
     global cell_line_of_interest
     global chromosomes_of_interest
-    global epigenetic_flag_of_interest
+    global epigenetic_flags_of_interest
     
     global search_type
     global search_within_gene
@@ -67,63 +72,42 @@ def read_command_line():
     global hap1_threshold
     global interferring_gene_overlaps
     
-    if len(sys.argv) == 2:
-        input_arguments = sys.argv[1]
-        with open(input_arguments) as input_file:
-            results_directory = re.findall("(?<= = ).*", input_file.readline())[0]
-            gene_annotation_reference = re.findall("(?<= = ).*", input_file.readline())[0]
-            regulatory_elements_reference = re.findall("(?<= = ).*", input_file.readline())[0]
-            cell_lines_expression_reference = re.findall("(?<= = ).*", input_file.readline())[0]
+    input_arguments = sys.argv[1]
+    with open(input_arguments) as input_file:
+        results_directory = re.findall("(?<= = ).*", input_file.readline())[0]
+        gene_annotation_reference = re.findall("(?<= = ).*", input_file.readline())[0]
+        regulatory_elements_reference = re.findall("(?<= = ).*", input_file.readline())[0]
+        cell_lines_expression_reference = re.findall("(?<= = ).*", input_file.readline())[0]
+        gene_prioritisation_report_directory = re.findall("(?<= = ).*", input_file.readline())[0]
+    
+        cell_line_of_interest = re.findall("(?<= = ).*", input_file.readline())[0]
+        chromosomes_of_interest = (re.findall("(?<= = ).*", input_file.readline())[0]).split(sep = ",")
+        epigenetic_flags_of_interest = re.findall("(?<= = ).*", input_file.readline())[0]
+    
+        search_type = re.findall("(?<= = ).*", input_file.readline())[0]
+        search_within_gene = strtobool(re.findall("(?<= = ).*", input_file.readline())[0])
+        upstream_search = int(re.findall("(?<= = ).*", input_file.readline())[0])
+        downstream_search = int(re.findall("(?<= = ).*", input_file.readline())[0])
+    
+        relative_non_housekeeping_weight = float(re.findall("(?<= = ).*", input_file.readline())[0])
+        relative_enhancer_count_weight = float(re.findall("(?<= = ).*", input_file.readline())[0])
+        relative_enhancer_proportion_weight = float(re.findall("(?<= = ).*", input_file.readline())[0])
+        relative_cell_line_expression_weight = float(re.findall("(?<= = ).*", input_file.readline())[0])
+        relative_gene_size_weight = float(re.findall("(?<= = ).*", input_file.readline())[0])
         
-            cell_line_of_interest = re.findall("(?<= = ).*", input_file.readline())[0]
-            chromosomes_of_interest = (re.findall("(?<= = ).*", input_file.readline())[0]).split(sep = ",")
-            epigenetic_flag_of_interest = re.findall("(?<= = ).*", input_file.readline())[0]
+        kernel_size_type = re.findall("(?<= = ).*", input_file.readline())[0]
+        absolute_kernel_size = float(re.findall("(?<= = ).*", input_file.readline())[0])
+        relative_kernel_size = float(re.findall("(?<= = ).*", input_file.readline())[0])
+        kernel_shape = re.findall("(?<= = ).*", input_file.readline())[0]
+        relative_kernel_sigma = float(re.findall("(?<= = ).*", input_file.readline())[0])
         
-            search_type = re.findall("(?<= = ).*", input_file.readline())[0]
-            search_within_gene = strtobool(re.findall("(?<= = ).*", input_file.readline())[0])
-            upstream_search = int(re.findall("(?<= = ).*", input_file.readline())[0])
-            downstream_search = int(re.findall("(?<= = ).*", input_file.readline())[0])
+        min_absolute_enhancer_cluster_width = float(re.findall("(?<= = ).*", input_file.readline())[0])
+        min_enhancer_cluster_prominence = float(re.findall("(?<= = ).*", input_file.readline())[0])
         
-            relative_non_housekeeping_weight = float(re.findall("(?<= = ).*", input_file.readline())[0])
-            relative_enhancer_count_weight = float(re.findall("(?<= = ).*", input_file.readline())[0])
-            relative_enhancer_proportion_weight = float(re.findall("(?<= = ).*", input_file.readline())[0])
-            relative_cell_line_expression_weight = float(re.findall("(?<= = ).*", input_file.readline())[0])
-            relative_gene_size_weight = float(re.findall("(?<= = ).*", input_file.readline())[0])
-            
-            kernel_size_type = re.findall("(?<= = ).*", input_file.readline())[0]
-            absolute_kernel_size = float(re.findall("(?<= = ).*", input_file.readline())[0])
-            relative_kernel_size = float(re.findall("(?<= = ).*", input_file.readline())[0])
-            kernel_shape = re.findall("(?<= = ).*", input_file.readline())[0]
-            relative_kernel_sigma = float(re.findall("(?<= = ).*", input_file.readline())[0])
-            
-            min_absolute_enhancer_cluster_width = float(re.findall("(?<= = ).*", input_file.readline())[0])
-            min_enhancer_cluster_prominence = float(re.findall("(?<= = ).*", input_file.readline())[0])
-            
-            sigmoidal_slope = float(re.findall("(?<= = ).*", input_file.readline())[0])
-            sigmoidal_midpoint = float(re.findall("(?<= = ).*", input_file.readline())[0])
-            hap1_threshold = float(re.findall("(?<= = ).*", input_file.readline())[0])
-            interferring_gene_overlaps = strtobool(re.findall("(?<= = ).*", input_file.readline())[0])
-        
-    else:
-        results_directory = sys.argv[1]
-        gene_annotation_reference = sys.argv[2]
-        regulatory_elements_reference = sys.argv[3]
-        cell_lines_expression_reference = sys.argv[4]
-        
-        cell_line_of_interest = sys.argv[5]
-        epigenetic_flag_of_interest = sys.argv[6]
-        
-        search_type = sys.argv[7]
-        search_within_gene = sys.argv[8]
-        upstream_search = int(sys.argv[9])
-        downstream_search = int(sys.argv[10])
-        
-        relative_non_housekeeping_weight = float(sys.argv[11])
-        relative_enhancer_count_weight = float(sys.argv[12])
-        relative_enhancer_proportion_weight = float(sys.argv[13])
-        relative_cell_line_expression_weight = float(sys.argv[14])
-        relative_gene_size_weight = float(sys.argv[15])
-        relative_kernel_size = float(sys.argv[16])
+        sigmoidal_slope = float(re.findall("(?<= = ).*", input_file.readline())[0])
+        sigmoidal_midpoint = float(re.findall("(?<= = ).*", input_file.readline())[0])
+        hap1_threshold = float(re.findall("(?<= = ).*", input_file.readline())[0])
+        interferring_gene_overlaps = strtobool(re.findall("(?<= = ).*", input_file.readline())[0])
     
 def set_weights():
     print("Setting weights...")
@@ -190,7 +174,7 @@ def clean_regulatory_elements():
         #regulatory_elements["Enhancer_ID"] = regulatory_elements["Attributes"].apply(lambda x : re.findall("ID=enhancer:(.*?);", x)[0])
         regulatory_elements = regulatory_elements.drop(["Source", "Type", "Score", "Strand", "Phase", "Attributes"], axis = 1)
     elif (regulatory_elements_reference[-3:] == "bed"):
-        regulatory_elements = regulatory_elements.drop(regulatory_elements[regulatory_elements["Flag"] != epigenetic_flag_of_interest].index)
+        regulatory_elements = regulatory_elements.drop(regulatory_elements[regulatory_elements["Flag"] != epigenetic_flags_of_interest].index)
         regulatory_elements = regulatory_elements.drop(["Flag"], axis = 1)
         regulatory_elements["Chromosome"] = regulatory_elements["Chromosome"].apply(lambda x : x[3:])
     else:
@@ -282,9 +266,7 @@ def find_nearby_enhancer_densities():
 
 def data_exploration():
     print("Visualising data...")
-    global relative_expression
-    global overlaps
-    global genes
+    global relative_expression, overlaps, genes
     relative_expression = expression.sort_values(by = ["Std"], ascending = False)
     #relative_expression = relative_expression[relative_expression["mean"] < relative_expression["HAP1"]]
     relative_expression["Difference"] = relative_expression[cell_line_of_interest] - relative_expression["Mean"]
@@ -331,12 +313,26 @@ def gene_scoring():
         (genes.loc[:, "HAP1"] * cell_line_expression_weight) + \
         (gene_size_weight / (genes.loc[:, "Gene_size"] + gene_size_weight))
     genes = genes.sort_values("Interest_score", ascending = False)
-    genes[["Gene_name", "Std", "HAP1", "Enhancer_count", "Enhancer_proportion", "Gene_size", "Interest_score"]].to_csv(results_directory + "gene_scoring.tsv", sep = "\t")
+    genes[["Gene_name", "Std", "HAP1", "Enhancer_count", "Enhancer_proportion", "Gene_size", "Interest_score"]].to_csv(results_directory + "gene_scores.tsv", sep = "\t", index = False)
+    
+def export_gene_scores_report():
+    print("Exporting gene prioritisation report...")
+    hash_md5 = hashlib.md5()
+    with open(input_arguments, "rb") as config:
+        for chunk in iter(lambda: config.read(4096), b""):
+            hash_md5.update(chunk)
+            
+    with open(input_arguments, "r") as config:
+        report_name = "gene_prioritisation_report_" + hash_md5.hexdigest() + ".txt"
+        report = open((gene_prioritisation_report_directory + report_name), "w")
+        report.write(config.read() + "\n")
+        with open((results_directory + "gene_scores.tsv"), "r") as scores:
+            report.write(scores.read())
+        report.close()
     
 def filter_hap1_expression():
     print("Filtering genes by HAP1 expression...")
     global genes
-    #genes["HAP1_score"] = 1 - (1 / (1 + math.exp((sigmoidal_slope * genes["HAP1"]) - (sigmoidal_midpoint * sigmoidal_slope))))
     genes["HAP1_normalised"] =  genes.apply(lambda gene : 1 - (1 / (1 + math.exp((sigmoidal_slope * gene.HAP1) - (sigmoidal_midpoint * sigmoidal_slope)))), axis = 1)
     
 def find_nearby_genes():
@@ -396,6 +392,5 @@ def get_kernel(size, sigma):
         kernel = gaussian_filter1d(kernel, sigma)
         return kernel
     
-
 if __name__ == "__main__":
     main()
