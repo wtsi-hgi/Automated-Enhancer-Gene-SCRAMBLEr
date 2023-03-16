@@ -39,10 +39,9 @@ def main():
         del quiescent_overlaps
     del enhancer_overlaps
     
-    #gene_data = rc.find_plateaus(gene_data)
+    gene_data = rc.find_plateaus(gene_data)
+    dv.gene_report(gene_data)
     
-    print(gene_data)
-    print(gene_data.columns)
     
     #enhancer_convolution, recombination_convolution = rc.overlay_convolutions(rc.enhancer_convolution(gene_data, enhancer_overlaps), rc.quiescent_convolution(gene_data, quiescent_overlaps)) 
     

@@ -6,7 +6,8 @@ import hashlib
 import sys
 
 import data_initialisation as di
-import region_convolutions as rc 
+import region_convolutions as rc
+import data_visualisation as dv
     
 def find_mean(expression_data):
     
@@ -163,6 +164,8 @@ def gene_scoring(genes):
     scaled_genes = genes.loc[:, ["Gene_name", "Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size"]]
     scaler.fit(scaled_genes.loc[:, ["Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size"]])
     scaled_genes.loc[:, ["Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size"]] = scaler.transform(scaled_genes[["Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size"]])
+    
+    dv.compare_metrics(scaled_genes, "Comparison of Metrics within Z-space", "metrics_comparison_zspace")
     
     scaled_genes["Interest_score"] = 0
     scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Std"] * di.STD_WEIGHT)
