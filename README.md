@@ -1,4 +1,4 @@
-# genome_scramble_tool
+# AEG SCRAMBLE
 A tool to help automate the Genome Scramble project
 
 Jonas Koeppel has started a project with Leopold Parts which will attempt to introduce controlled breaks between clusters of enhancers near genes and recombine the piece in a random manner to investigate phenotypic changes.
