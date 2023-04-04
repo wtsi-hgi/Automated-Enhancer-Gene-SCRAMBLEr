@@ -11,6 +11,9 @@ import data_visualisation as dv
     
 def find_mean(expression_data):
     
+    #Adds the mean of gene expression to the given expression data frame, giving
+    #a mean for each gene
+    
     print("Finding mean of expression for each gene...")
     
     expression_data["Mean"] = expression_data.loc[:, expression_data.columns != "Gene_name"].mean(axis = 1)
@@ -18,6 +21,10 @@ def find_mean(expression_data):
     return expression_data
     
 def find_std(expression_data):
+    
+    #Adds the standard deviation to the given expression dataframe, giving the
+    #standard deviation across expression of each gene in all provided cell
+    #types
     
     print("Finding standard deviation of expression for each gene...")
     
@@ -27,6 +34,8 @@ def find_std(expression_data):
 
 def find_anomalous_score_of_gene_expression(expression_data):
     
+    #Adds the z-score of each gene based on its expression in the cell line of interest compared to all others
+    
     print("Finding anomalies...")
     
     expression_data["Anomalous_score"] = expression_data.apply(lambda gene : (gene["General_gene_expression"] - gene["Mean"]) / gene["Std"], axis = 1)
@@ -34,6 +43,8 @@ def find_anomalous_score_of_gene_expression(expression_data):
     return expression_data
 
 def find_gene_sizes(genes):
+    
+    #Adds the size of each gene based on its start and end point
     
     print("Finding gene sizes...")
     
@@ -43,10 +54,19 @@ def find_gene_sizes(genes):
 
 def find_nearby_genes(gene_data):
     
+    #For each gene, finds the nearest gene upstream and downstream, a threshold
+    #is set on whether a gene counts based on its expression within the cell
+    #line of interest, "Start" and "End" are generated for use with PyRanges
+    #module, but are removed at the end of function
+    
     print("Finding nearby genes...")
     
     gene_data["Start"] = gene_data["Gene_start"]
     gene_data["End"] = gene_data["Gene_end"]
+    
+    scaler = StandardScaler()
+    #Add a column for the scaled expression here and use it to filter the genes
+    
     
     genes_pr = pr.PyRanges(gene_data.loc[gene_data["Specific_gene_expression"] > di.CELL_LINE_SPECIFIC_EXPRESSION_THRESHOLD])
     genes_nearest_upstream_pr = genes_pr.nearest(genes_pr, how = "upstream", suffix = "_upstream_interferrer", overlap = di.INTERFERRING_GENE_OVERLAPS)
@@ -67,6 +87,12 @@ def find_nearby_genes(gene_data):
     return gene_data
 
 def find_search_windows(genes):
+
+    #Defines a search window for each gene, based on the number of bases
+    #upstream and downstream specified, the starting point of the window, and
+    #whether the gene itself is included. Search window is foreshorterned if an
+    #interferring gene is within the window, or if the window would include
+    #negative bases.
 
     print("Finding sites to define search window...") 
     
@@ -122,6 +148,10 @@ def find_search_windows(genes):
     
 def find_overlaps(elements, genes):
     
+    #PyRanges is used to find specified element type overlaps within search
+    #window given for each gene. "Start" and "End" are generated for PyRanges
+    #and removed subsequently. Overlaps are stored in a new dataframe
+    
     print("Searching for overlapping elements...")
     
     genes["Start"] = genes["Search_window_start"]
@@ -138,16 +168,20 @@ def find_overlaps(elements, genes):
     
 def count_overlaps_per_gene(genes, overlaps, element_type):
     
+    #Number of specified element overlaps are counted for each gene.
+    
     print("Counting overlaps...")
 
     overlaps.drop(["Start", "End"], axis = 1)
     genes = pd.merge(genes, overlaps.groupby("Gene_name").size().reset_index(name = (element_type + "_count")), on = "Gene_name", how = "inner")
     
-    
     return genes
     
 def find_nearby_enhancer_densities(gene_data, overlaps):
 
+    #Density of specifed element overlaps within the given search window is
+    #calculated for each gene.
+    
     print("Finding proximal enhancer densities...")
     
     overlaps["Enhancer_proportion"] = (overlaps.loc[:, "End"] - overlaps.loc[:, "Start"]) / overlaps.loc[:, "Search_window_size"]
@@ -158,6 +192,10 @@ def find_nearby_enhancer_densities(gene_data, overlaps):
     
 def gene_scoring(genes):
     
+    #Various attributes of each gene are scaled and normallised, before being
+    #weighted and combined into an interest score. The export_gene_scores_report
+    #function is called
+    
     print("Scoring genes...")
     
     scaler = StandardScaler()
@@ -165,7 +203,7 @@ def gene_scoring(genes):
     scaler.fit(scaled_genes.loc[:, ["Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size"]])
     scaled_genes.loc[:, ["Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size"]] = scaler.transform(scaled_genes[["Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size"]])
     
-    dv.compare_metrics(scaled_genes, "Comparison of Metrics within Z-space", "metrics_comparison_zspace")
+    dv.compare_metrics(scaled_genes, "Comparison of Metrics within Z-space", "metrics_comparison_zspace_keep_inf_log2")
     
     scaled_genes["Interest_score"] = 0
     scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Std"] * di.STD_WEIGHT)
@@ -186,6 +224,10 @@ def gene_scoring(genes):
     return genes
     
 def export_gene_scores_report():
+    
+    #Md5 checksum of config file is generated. Gene prioritisation report file
+    #is created and checksum is included in name to differentiate different
+    #configs. Report saved in given location.
     
     print("Exporting gene prioritisation report...")
     
