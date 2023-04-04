@@ -2,12 +2,16 @@ import sys
 import re
 import json
 import pandas as pd
+import numpy as np
 
 import find_metrics as fm
 
-def read_config_file(): #Generates global variables and assigns strings to them based on lines in config file.
+def read_config_file():
     
-    print("Reading command line...")
+    #Generates global variables, reads in json file, assigns data to them based
+    #on lines in config file.
+    
+    print("Reading configuration file...")
 
     global RESULTS_DIRECTORY
     global GENE_PRIORITISATION_REPORT_DIRECTORY
@@ -15,6 +19,7 @@ def read_config_file(): #Generates global variables and assigns strings to them 
     global REGULATORY_ELEMENTS_ANNOTATION_REFERENCE_PATH
     global GENERAL_EXPRESSION_BY_CELL_LINE_REFERENCE_PATH
     global SPECIFIC_EXPRESSION_BY_CELL_LINE_REFERENCE_PATH
+    global REFERENCE_GENOME
 
     global CELL_LINE_OF_INTEREST
     global CHROMOSOMES_OF_INTEREST
@@ -72,6 +77,7 @@ def read_config_file(): #Generates global variables and assigns strings to them 
         REGULATORY_ELEMENTS_ANNOTATION_REFERENCE_PATH = settings["regulatory_elements_reference"]
         GENERAL_EXPRESSION_BY_CELL_LINE_REFERENCE_PATH = settings["general_expression_by_cell_line_reference_path"]
         SPECIFIC_EXPRESSION_BY_CELL_LINE_REFERENCE_PATH = settings["specific_expression_by_cell_line_reference_path"]
+        REFERENCE_GENOME = settings["reference_genome"]
 
         CELL_LINE_OF_INTEREST = settings["cell_line_of_interest"]
         CHROMOSOMES_OF_INTEREST = settings["chromosomes_of_interest"]
@@ -121,15 +127,20 @@ def read_config_file(): #Generates global variables and assigns strings to them 
         
         print("ERROR: Config file could not be read.")
         
-def read_gene_annotations(): #Assigns the gene annotations gtf file to a pandas dataframe.
+def read_gene_annotations():
+    
+    #Assigns the gene annotations gtf file to a pandas dataframe.
     
     print("Reading gene annotations file...")
 
     try:
         gene_annotations = pd.read_csv(GENE_ANNOTATION_REFERENCE_PATH, sep = "\t",
-                                       names = ["Chromosome", "Source", "Type", "Start", "End", "Score", "Strand", "Phase", "Attributes"],
+                                       names = ["Chromosome", "Source", "Type", "Start", "End",
+                                                "Score", "Strand", "Phase", "Attributes"],
                                        skiprows = 5,
-                                       dtype = {"Chromosome" : str, "Source" : str, "Type" : str, "Start" : int, "End" : int, "Score" : str, "Strand" : str, "Phase" : str, "Attributes" : str}
+                                       dtype = {"Chromosome" : str, "Source" : str, "Type" : str,
+                                                "Start" : int, "End" : int, "Score" : str, "Strand" : str,
+                                                "Phase" : str, "Attributes" : str}
                                        )
     
         return gene_annotations
@@ -137,7 +148,9 @@ def read_gene_annotations(): #Assigns the gene annotations gtf file to a pandas 
     except:
         print("ERROR: Gene annotations file could not be read.")
         
-def read_general_expression_data(): #Assigns the expression csv file to a pandas dataframe.
+def read_general_expression_data():
+    
+    #Assigns the expression-for-many-cell-types csv file to a pandas dataframe.
         
     print("Reading general expression file...")
 
@@ -149,7 +162,9 @@ def read_general_expression_data(): #Assigns the expression csv file to a pandas
     except:
         print("ERROR: General expression data could not be read.")
         
-def read_specific_expression_data(): #Assigns the expression csv file to a pandas dataframe.
+def read_specific_expression_data():
+    
+    #Assigns the expression-for-cell-line-of-interest csv file to a pandas dataframe.
         
     print("Reading specific expression file...")
 
@@ -164,14 +179,17 @@ def read_specific_expression_data(): #Assigns the expression csv file to a panda
     except:
         print("ERROR: Specific expression data could not be read.")
          
-def read_regulatory_elements(): #Assigns the regulatory elements gff or bed file to a pandas dataframe.
+def read_regulatory_elements():
+    
+    #Assigns the regulatory elements gff or bed file to a pandas dataframe.
     
     print("Reading regulatory elements file...")
 
     try:
         if (REGULATORY_ELEMENTS_ANNOTATION_REFERENCE_PATH[-3:] == "gff"):
             regulatory_elements = pd.read_csv(REGULATORY_ELEMENTS_ANNOTATION_REFERENCE_PATH, sep = "\t",
-                                              names = ["Chromosome", "Source", "Type", "Start", "End", "Score", "Strand", "Phase", "Attributes"]
+                                              names = ["Chromosome", "Source", "Type", "Start", "End",
+                                                       "Score", "Strand", "Phase", "Attributes"]
                                               )
         elif (REGULATORY_ELEMENTS_ANNOTATION_REFERENCE_PATH[-3:] == "bed"):
             regulatory_elements = pd.read_csv(REGULATORY_ELEMENTS_ANNOTATION_REFERENCE_PATH, sep = "\t",
@@ -183,6 +201,11 @@ def read_regulatory_elements(): #Assigns the regulatory elements gff or bed file
     return regulatory_elements
         
 def clean_genes(gene_annotations):
+    
+    #Cleans genetic annotations dataframe by removing chromosomes that are not
+    #of interest, removing annotations that are not for genes, finds the gene
+    #biotype and removes non-protein coding genes extracts the gene name as an
+    #attribute, drop irrelevant columns, drops dulpicate genes
     
     print("Cleaning gene data...")
     
@@ -197,6 +220,12 @@ def clean_genes(gene_annotations):
     return gene_annotations
 
 def clean_general_expression_data(general_expression_data):
+    
+    #Cleans the general expression data by dropping irrelevant non-numeric
+    #columns, converting the first row to headers, setting gene name as index,
+    #renaming columns, finding the means and standard deviation of expression
+    #for each gene and the z-score of the cell line of interest's expression for
+    #each gene, dropping irrelevant columns, and dropping duplicate genes
     
     print("Cleaning general expression data...")
 
@@ -215,15 +244,27 @@ def clean_general_expression_data(general_expression_data):
 
 def clean_specific_expression_data(specific_expression_data):
     
+    #Cleans the expression data specific to the cell line of interest by turning
+    #minus infinite strings into a floating point representation of negative
+    #infinity, duplicate genes are dropped
+    
     print("Cleaning specific expression data...")
     
-    #specific_expression_data["Specific_gene_expression"] = specific_expression_data["Specific_gene_expression"].apply(lambda expression : 0 if expression == "-Inf" else pow(2, expression))
-    specific_expression_data["Specific_gene_expression"] = specific_expression_data["Specific_gene_expression"].apply(lambda expression : 0 if expression == "-Inf" else expression)
+    #specific_expression_data = specific_expression_data.drop(specific_expression_data[specific_expression_data["Specific_gene_expression"] == "-Inf"].index)
+    #specific_expression_data["Specific_gene_expression"] = specific_expression_data["Specific_gene_expression"].apply(lambda expression : np.NINF if expression == "-Inf" else pow(2, expression))
+    specific_expression_data["Specific_gene_expression"] = specific_expression_data["Specific_gene_expression"].apply(lambda expression : np.NINF if expression == "-Inf" else expression)
     specific_expression_data = specific_expression_data.drop_duplicates(keep = False, subset = ["Gene_name"])
     
     return specific_expression_data
 
 def clean_regulatory_elements(regulatory_elements):
+    
+    #Clean the regulatory elements dataframe, depending on whether it is in gff
+    #or bed file format, either by dropping elements which are not enhancers,
+    #and then dropping unecessary columns, or by removing "chr" from chromosome
+    #strings, including only elements that have flags we are interested in, then
+    #removing the flags, separately creating a quiescent dataframe in the same
+    #way
     
     print("Cleaning regulatory elements data...")
     
@@ -249,6 +290,9 @@ def clean_regulatory_elements(regulatory_elements):
     return enhancers, quiescent_regions
 
 def merge_annotation_expression(gene_annotation_data, general_expression_data, specific_expression_data):
+    
+    #Joins all previously created dataframes into one, alligned by the gene
+    #names, columns are renamed to be more descriptive
     
     print("Merging annotations and expression data...")
 

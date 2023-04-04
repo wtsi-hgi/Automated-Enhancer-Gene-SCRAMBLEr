@@ -32,15 +32,17 @@ def main():
     gene_data = fm.find_nearby_enhancer_densities(gene_data, enhancer_overlaps)
     gene_data = fm.gene_scoring(gene_data)
     
-    gene_data = rc.enhancer_convolution(gene_data, enhancer_overlaps)
+    gene_data = rc.convolution(gene_data, enhancer_overlaps, "Enhancer")
+
     if di.QUIESCENT_CONVOLUTION == True:
         gene_data = rc.quiescent_convolution(gene_data, quiescent_overlaps)
-        #merge the convolutions
         del quiescent_overlaps
     del enhancer_overlaps
     
     gene_data = rc.find_plateaus(gene_data)
-    dv.gene_report(gene_data)
+    rc.export_convolutions(gene_data)
+    rc.export_plateaus(gene_data)
+    #dv.gene_report(gene_data)
     
     
     #enhancer_convolution, recombination_convolution = rc.overlay_convolutions(rc.enhancer_convolution(gene_data, enhancer_overlaps), rc.quiescent_convolution(gene_data, quiescent_overlaps)) 
