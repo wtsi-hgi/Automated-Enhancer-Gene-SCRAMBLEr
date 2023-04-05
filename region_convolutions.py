@@ -9,26 +9,6 @@ import data_initialisation as di
 import data_visualisation as dv
 import sequence_seeking as ss
 
-
-def gene_convolution(gene_data):
-    
-    print("Finding convolution signal of gene...")
-    
-    gene_data["Gene_base_coordinates"] = [np.empty(0, dtype = float)] * len(genes_search)
-    gene_data["Gene_step_function"] = [np.empty(0, dtype = float)] * len(genes_search)
-    gene_data["Gene_convolution"] = [np.empty(0, dtype = float)] * len(genes_search)
-    gene_data["Gene_convolved_coordinates"] = [np.empty(0, dtype = float)] * len(genes_search)
-    
-    genes_search = genes_search.sort_values("Interest_score", ascending = False).reset_index(drop = True)
-    
-    for index, gene in gene_data.iterrows():
-        
-        window = get_kernel(di.ENHANCER_KERNEL_SHAPE, int((di.RELATIVE_ENHANCER_KERNEL_SIZE * (gene["Search_window_end"].astype("int") - gene["Search_window_start"].astype("int")))), int(di.RELATIVE_ENHANCER_KERNEL_SIGMA * (gene["Search_window_end"].astype("int") - gene["Search_window_start"].astype("int"))))
-        gene_basewise = np.zeros((gene["Search_window_end"] - gene["Search_window_start"]), dtype = int)
-        basewise = np.arange(gene["Search_window_start"], gene["Search_window_end"])
-        
-
-
 def convolution(genes_search, overlaps, region_name):
     
     #X and Y coordinates are generated for both step function and convolution
@@ -41,11 +21,12 @@ def convolution(genes_search, overlaps, region_name):
     genes_search["Search_window_start"] = genes_search["Search_window_start"].astype("int")
     genes_search["Search_window_end"] = genes_search["Search_window_end"].astype("int")
     
-    genes_search[(region_name + "_searched_coordinates")] = [np.empty(0, dtype = float)] * len(genes_search)
-    genes_search[(region_name + "_step_function")] = [np.empty(0, dtype = float)] * len(genes_search)
-    genes_search[(region_name + "_convolution")] = [np.empty(0, dtype = float)] * len(genes_search)
-    genes_search[(region_name + "_convolved_coordinates")] = [np.empty(0, dtype = float)] * len(genes_search)
-    
+    genes_search[
+        (region_name + "_searched_coordinates"), 
+        (region_name + "_step_function"), 
+        (region_name + "_convolution"), 
+        (region_name + "_convolved_coordinates")] = [np.empty(0, dtype = float)] * len(genes_search)
+        
     genes_search = genes_search.sort_values("Interest_score", ascending = False).reset_index(drop = True)
     
     for index, gene in genes_search.head(di.ENHANCER_CONVOLUTION).iterrows():
@@ -61,7 +42,7 @@ def convolution(genes_search, overlaps, region_name):
             
             overlap_basewise = np.where(np.logical_and(overlap["Start"] <= basewise, basewise <= overlap["End"]), 1, 0)
             step_function_y = np.where(overlap_basewise == 1, 1, step_function_y)
-
+            
         step_function_x = ((np.arange(gene["Search_window_start"], gene["Search_window_end"])))
         convolution_y = np.convolve(kernel, step_function_y)
         convolution_x = (np.arange((gene["Search_window_start"] - (len(kernel) // 2)), (gene["Search_window_start"] - (len(kernel) // 2) + len(convolution_y))))
@@ -75,45 +56,7 @@ def convolution(genes_search, overlaps, region_name):
         
     return genes_search
 
-def quiescent_convolution(genes_search, overlaps):
-    
-    print("Convolving quiescent regions...")
-    
-    genes_search["Start"] = genes_search["Search_window_start"].astype("int")
-    genes_search["End"] = genes_search["Search_window_end"].astype("int")
-    
-    genes_search["Quiescent_searched_coordinates"] = ""
-    genes_search["Quiescent_convolution"] = ""
-    genes_search["Quiescent_convolved_coordinates"] = ""
 
-    genes_search = genes_search.sort_values("Interest_score", ascending = False)
-    
-    for index, gene in genes_search.iterrows():
-        
-        window = get_kernel(di.ENHANCER_KERNEL_SHAPE, int((di.RELATIVE_ENHANCER_KERNEL_SIZE * (gene.End - gene.Start))), int(di.RELATIVE_ENHANCER_KERNEL_SIGMA * (gene.End - gene.Start)))
-        gene_basewise = np.zeros((gene.End - gene.Start), dtype = int)
-        basewise = np.arange(gene.Start, gene.End)
-        gene_specific_enhancer_overlaps = overlaps.loc[overlaps["Gene_name"] == gene["Gene_name"]]
-        
-        for overlap_index, overlap in gene_specific_enhancer_overlaps.iterrows():
-            
-            overlap_basewise = np.where(np.logical_and(overlap.Start <= basewise, basewise <= overlap.End), 1, 0)
-            gene_basewise = np.where(overlap_basewise == 1, 1, gene_basewise)
-            
-        gene["Quiescent_searched_coordinates"] = np.arange(gene.Start, gene.End)
-        gene["Quiescent_convolution"] = np.convolve(window, gene_basewise)
-        gene["Quiescent_convolved_coordinates"] = np.arange((gene.Start - (len(window) // 2)), (gene.Start - (len(window) // 2) + len(gene["Quiescent_convolution"])))
-
-        print("Convolved quiescent regions for " + str(index) + " of " + str(di.ENHANCER_CONVOLUTION) + "...")
-        
-        if i > di.ENHANCER_CONVOLUTION:
-            
-            break
-        
-    genes_search.drop(["Start", "End"], axis = 1)
-        
-    return genes_search
-    
 def combine_convolutions(enhancer_convolution, quiescent_convolution):
     
     print("Merging convolutions...")
@@ -132,7 +75,6 @@ def get_kernel(kernel_shape, size, sigma):
         
         kernel = np.ones(size)
         
-        return kernel
     
     elif kernel_shape == "guassian":
         
@@ -140,7 +82,27 @@ def get_kernel(kernel_shape, size, sigma):
         np.put(kernel, (size // 2), 10)
         kernel = gaussian_filter1d(kernel, sigma)
         
-        return kernel
+    else:
+        raise Exception("Kernel shape is neither Flat nor Guassian")
+        
+    return kernel
+
+    
+def export_convolutions(gene_data):
+    
+    #Coordinates of convolutions are exported to wig file, for each gene
+    
+    print("Exporting enhancer density convolutions to wig file...")
+    
+    for index, gene in gene_data.head(di.ENHANCER_CONVOLUTION).iterrows():
+    
+        with open((di.RESULTS_DIRECTORY + gene["Gene_name"] + "_convolutions.wiggle"), "w") as f:
+            
+            f.write("fixedStep chrom=chr" + gene["Chromosome"] + " start=" + str(gene["Enhancer_convolved_coordinates"][0]) +" step=1")
+            f.write("\n")
+    
+        convolution_signal = pd.DataFrame({"Convolution_signal" : gene_data.loc[index, "Enhancer_convolution"]})
+        convolution_signal.to_csv((di.RESULTS_DIRECTORY + gene["Gene_name"] + "_convolutions.wig"), sep = "\t", index = False, mode = "a", header = False)
     
 def export_convolutions(gene_data):
     
@@ -210,7 +172,6 @@ def find_plateaus(gene_data):
     return gene_data
     
 def export_plateaus(gene_data):
-    
     #export_plateaus saves plateaus associated with each gene as a bed file
     
     print("Exporting plateaus to bed file...")
@@ -218,7 +179,7 @@ def export_plateaus(gene_data):
     with open((di.RESULTS_DIRECTORY + "plateaus.bed"), "w") as f:
             f.write("Chromosome Start	End	Gene_name")
             f.write("\n")
-    
+
     for index, gene in gene_data.head(di.ENHANCER_CONVOLUTION).iterrows():
         
         plateau_regions = pd.DataFrame({"Start" : gene_data.loc[index, "Plateau_starts"], "End" : gene_data.loc[index, "Plateau_ends"]})
