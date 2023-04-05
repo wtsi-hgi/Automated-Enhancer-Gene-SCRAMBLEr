@@ -68,9 +68,10 @@ def find_nearby_genes(gene_data):
     #Add a column for the scaled expression here and use it to filter the genes
     
     
-    genes_pr = pr.PyRanges(gene_data.loc[gene_data["Specific_gene_expression"] > di.CELL_LINE_SPECIFIC_EXPRESSION_THRESHOLD])
-    genes_nearest_upstream_pr = genes_pr.nearest(genes_pr, how = "upstream", suffix = "_upstream_interferrer", overlap = di.INTERFERRING_GENE_OVERLAPS)
-    genes_nearest_downstream_pr = genes_pr.nearest(genes_pr, how = "downstream", suffix = "_downstream_interferrer", overlap = di.INTERFERRING_GENE_OVERLAPS)
+    interferring_genes_pr = pr.PyRanges(gene_data.loc[gene_data["Specific_gene_expression"] > di.CELL_LINE_SPECIFIC_EXPRESSION_THRESHOLD])
+    genes_pr = pr.PyRanges(gene_data)
+    genes_nearest_upstream_pr = genes_pr.nearest(interferring_genes_pr, how = "upstream", suffix = "_upstream_interferrer", overlap = di.INTERFERRING_GENE_OVERLAPS)
+    genes_nearest_downstream_pr = genes_pr.nearest(interferring_genes_pr, how = "downstream", suffix = "_downstream_interferrer", overlap = di.INTERFERRING_GENE_OVERLAPS)
     genes_nearest_upstream = genes_nearest_upstream_pr.df
     genes_nearest_downstream = genes_nearest_downstream_pr.df
     
@@ -203,7 +204,7 @@ def gene_scoring(genes):
     scaler.fit(scaled_genes.loc[:, ["Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size"]])
     scaled_genes.loc[:, ["Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size"]] = scaler.transform(scaled_genes[["Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size"]])
     
-    dv.compare_metrics(scaled_genes, "Comparison of Metrics within Z-space", "metrics_comparison_zspace_keep_inf_log2")
+    dv.compare_metrics(scaled_genes, "Comparison of Metrics within Z-space", "metrics_comparison_zspace")
     
     scaled_genes["Interest_score"] = 0
     scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Std"] * di.STD_WEIGHT)
@@ -215,9 +216,10 @@ def gene_scoring(genes):
     scaled_genes = scaled_genes.sort_values("Interest_score", ascending = False)
     
     genes = pd.merge(genes, scaled_genes.loc[:, ["Gene_name", "Interest_score"]], on = "Gene_name")
-    genes = genes.sort_values("Interest_score", ascending = False).reset_index(drop=True)
+    genes = genes.sort_values("Interest_score", ascending = False).reset_index()
     
-    genes.loc[:, ["Gene_name", "Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size", "Interest_score"]].to_csv(di.RESULTS_DIRECTORY + "gene_scores.tsv", sep = "\t", index = False)
+    
+    genes.loc[:, ["Gene_name", "Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size", "Interest_score"]].to_csv(di.RESULTS_DIRECTORY + "gene_scores.tsv", sep = "\t", index = True)
     
     export_gene_scores_report()
     

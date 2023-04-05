@@ -251,8 +251,8 @@ def clean_specific_expression_data(specific_expression_data):
     print("Cleaning specific expression data...")
     
     #specific_expression_data = specific_expression_data.drop(specific_expression_data[specific_expression_data["Specific_gene_expression"] == "-Inf"].index)
-    #specific_expression_data["Specific_gene_expression"] = specific_expression_data["Specific_gene_expression"].apply(lambda expression : np.NINF if expression == "-Inf" else pow(2, expression))
-    specific_expression_data["Specific_gene_expression"] = specific_expression_data["Specific_gene_expression"].apply(lambda expression : np.NINF if expression == "-Inf" else expression)
+    specific_expression_data["Specific_gene_expression"] = specific_expression_data["Specific_gene_expression"].apply(lambda expression : 0 if expression == "-Inf" else pow(2, expression))
+    #specific_expression_data["Specific_gene_expression"] = specific_expression_data["Specific_gene_expression"].apply(lambda expression : np.NINF if expression == "-Inf" else expression)
     specific_expression_data = specific_expression_data.drop_duplicates(keep = False, subset = ["Gene_name"])
     
     return specific_expression_data
