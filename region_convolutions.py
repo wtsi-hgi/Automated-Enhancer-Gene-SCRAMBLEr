@@ -9,6 +9,16 @@ import data_initialisation as di
 import data_visualisation as dv
 import sequence_seeking as ss
 
+def define_step_function_of_element_overlaps_within_search_window(gene_data, overlaps, region_name):
+    
+    print("Generating step function for elements within search window...")
+    
+    gene_data["Search_window_start", "Search_window_end"] = gene_data["Search_window_start", "Search_window_end"].astype("int")
+
+    gene_data[
+        (region_name + "_step_function_x"), 
+        (region_name + "_step_function_y")] = [np.empty(0, dtype = float)] * len(gene_data)
+
 def convolution(genes_search, overlaps, region_name):
     
     #X and Y coordinates are generated for both step function and convolution
@@ -26,7 +36,7 @@ def convolution(genes_search, overlaps, region_name):
         (region_name + "_step_function"), 
         (region_name + "_convolution"), 
         (region_name + "_convolved_coordinates")] = [np.empty(0, dtype = float)] * len(genes_search)
-        
+
     genes_search = genes_search.sort_values("Interest_score", ascending = False).reset_index(drop = True)
     
     for index, gene in genes_search.head(di.ENHANCER_CONVOLUTION).iterrows():
@@ -86,23 +96,6 @@ def get_kernel(kernel_shape, size, sigma):
         raise Exception("Kernel shape is neither Flat nor Guassian")
         
     return kernel
-
-    
-def export_convolutions(gene_data):
-    
-    #Coordinates of convolutions are exported to wig file, for each gene
-    
-    print("Exporting enhancer density convolutions to wig file...")
-    
-    for index, gene in gene_data.head(di.ENHANCER_CONVOLUTION).iterrows():
-    
-        with open((di.RESULTS_DIRECTORY + gene["Gene_name"] + "_convolutions.wiggle"), "w") as f:
-            
-            f.write("fixedStep chrom=chr" + gene["Chromosome"] + " start=" + str(gene["Enhancer_convolved_coordinates"][0]) +" step=1")
-            f.write("\n")
-    
-        convolution_signal = pd.DataFrame({"Convolution_signal" : gene_data.loc[index, "Enhancer_convolution"]})
-        convolution_signal.to_csv((di.RESULTS_DIRECTORY + gene["Gene_name"] + "_convolutions.wig"), sep = "\t", index = False, mode = "a", header = False)
     
 def export_convolutions(gene_data):
     
@@ -126,9 +119,7 @@ def find_plateaus(gene_data):
     #separate the search window into regions based on the y-value of each
     #convolved base.
     
-    gene_data["Plateau_coordinates"] = ""
-    gene_data["Plateau_starts"] = ""
-    gene_data["Plateau_ends"] = ""
+    gene_data["Plateau_coordinates", "Plateau_starts", "Plateau_ends"] = ""
     
     gene_data = gene_data.sort_values("Interest_score", ascending = False)
     
@@ -148,10 +139,6 @@ def find_plateaus(gene_data):
         gene_data.at[index, "Plateau_coordinates"] = plateau_coordinates
         gene_data.at[index, "Plateau_starts"] = plateau_coordinates[::2]
         gene_data.at[index, "Plateau_ends"] = plateau_coordinates[1::2]
-        
-        #print(gene_data.at[index, "Plateau_coordinates"])
-        #print(gene_data.at[index, "Plateau_starts"])
-        #print(gene_data.at[index, "Plateau_ends"])
         
         #pre_threshold_crossings = np.diff(convolved_y < threshold, append = False)
         #pre_threshold_crossings = np.argwhere(pre_threshold_crossings)[:, 0]
