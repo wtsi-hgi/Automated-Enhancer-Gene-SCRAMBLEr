@@ -36,7 +36,7 @@ def convolution(genes_search, overlaps, region_name):
         (region_name + "_step_function"), 
         (region_name + "_convolution"), 
         (region_name + "_convolved_coordinates")] = [np.empty(0, dtype = float)] * len(genes_search)
-    
+
     genes_search = genes_search.sort_values("Interest_score", ascending = False).reset_index(drop = True)
     
     for index, gene in genes_search.head(di.ENHANCER_CONVOLUTION).iterrows():
@@ -52,7 +52,7 @@ def convolution(genes_search, overlaps, region_name):
             
             overlap_basewise = np.where(np.logical_and(overlap["Start"] <= basewise, basewise <= overlap["End"]), 1, 0)
             step_function_y = np.where(overlap_basewise == 1, 1, step_function_y)
-
+            
         step_function_x = ((np.arange(gene["Search_window_start"], gene["Search_window_end"])))
         convolution_y = np.convolve(kernel, step_function_y)
         convolution_x = (np.arange((gene["Search_window_start"] - (len(kernel) // 2)), (gene["Search_window_start"] - (len(kernel) // 2) + len(convolution_y))))
@@ -96,7 +96,6 @@ def get_kernel(kernel_shape, size, sigma):
         raise Exception("Kernel shape is neither Flat nor Guassian")
         
     return kernel
-
     
 def export_convolutions(gene_data):
     
@@ -160,7 +159,6 @@ def find_plateaus(gene_data):
     return gene_data
     
 def export_plateaus(gene_data):
-    
     #export_plateaus saves plateaus associated with each gene as a bed file
     
     print("Exporting plateaus to bed file...")
@@ -168,7 +166,7 @@ def export_plateaus(gene_data):
     with open((di.RESULTS_DIRECTORY + "plateaus.bed"), "w") as f:
             f.write("Chromosome Start	End	Gene_name")
             f.write("\n")
-    
+
     for index, gene in gene_data.head(di.ENHANCER_CONVOLUTION).iterrows():
         
         plateau_regions = pd.DataFrame({"Start" : gene_data.loc[index, "Plateau_starts"], "End" : gene_data.loc[index, "Plateau_ends"]})
