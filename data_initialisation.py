@@ -143,7 +143,7 @@ def read_gene_annotations():
                                                 "Phase" : str, "Attributes" : str}
                                        )
     
-        return gene_annotations
+        return clean_genes(gene_annotations)
         
     except:
         print("ERROR: Gene annotations file could not be read.")
@@ -157,7 +157,7 @@ def read_general_expression_data():
     try:
         general_expression_data = pd.read_csv(GENERAL_EXPRESSION_BY_CELL_LINE_REFERENCE_PATH).transpose()
         
-        return general_expression_data  
+        return clean_general_expression_data(general_expression_data)  
     
     except:
         print("ERROR: General expression data could not be read.")
@@ -174,7 +174,7 @@ def read_specific_expression_data():
                                                names = ["Gene_name", "Specific_gene_expression"],
                                                skiprows = 1)
         
-        return specific_expression_data    
+        return clean_specific_expression_data(specific_expression_data)    
     
     except:
         print("ERROR: Specific expression data could not be read.")
@@ -186,19 +186,13 @@ def read_regulatory_elements():
     print("Reading regulatory elements file...")
 
     try:
-        if (REGULATORY_ELEMENTS_ANNOTATION_REFERENCE_PATH[-3:] == "gff"):
-            regulatory_elements = pd.read_csv(REGULATORY_ELEMENTS_ANNOTATION_REFERENCE_PATH, sep = "\t",
-                                              names = ["Chromosome", "Source", "Type", "Start", "End",
-                                                       "Score", "Strand", "Phase", "Attributes"]
-                                              )
-        elif (REGULATORY_ELEMENTS_ANNOTATION_REFERENCE_PATH[-3:] == "bed"):
-            regulatory_elements = pd.read_csv(REGULATORY_ELEMENTS_ANNOTATION_REFERENCE_PATH, sep = "\t",
-                                              names = ["Chromosome", "Start", "End", "Flag"]
-                                              )
+        regulatory_elements = pd.read_csv(REGULATORY_ELEMENTS_ANNOTATION_REFERENCE_PATH, sep = "\t",
+                                              names = ["Chromosome", "Start", "End", "Flag"])
+        
+        return regulatory_elements    
+    
     except:
         print("ERROR: Could not read regulatory elements file.")
-        
-    return regulatory_elements
         
 def clean_genes(gene_annotations):
     
@@ -216,6 +210,7 @@ def clean_genes(gene_annotations):
     gene_annotations["Gene_name"] = gene_annotations["Attributes"].apply(lambda x : re.findall("gene_name \"(.*?)\"", x)[0] if re.search("gene_name \"(.*?)\"", x) != None else "None")
     gene_annotations = gene_annotations.drop(["Source", "Type", "Score", "Phase", "Attributes", "Gene_biotype"], axis = 1)
     gene_annotations = gene_annotations.drop_duplicates(keep = False, subset = ["Gene_name"])
+    gene_annotations = gene_annotations.rename(columns = {"Start" : "Gene_start", "End" : "Gene_end"})
     
     return gene_annotations
 
@@ -259,45 +254,19 @@ def clean_specific_expression_data(specific_expression_data):
 
 def clean_regulatory_elements(regulatory_elements):
     
-    #Clean the regulatory elements dataframe, depending on whether it is in gff
-    #or bed file format, either by dropping elements which are not enhancers,
-    #and then dropping unecessary columns, or by removing "chr" from chromosome
-    #strings, including only elements that have flags we are interested in, then
-    #removing the flags, separately creating a quiescent dataframe in the same
+    #Clean the regulatory elements dataframe by removing "chr" from chromosome
+    #strings, including only regulatory elements from within flags of interest,
+    #separately creating a quiescent dataframe in the same
     #way
     
     print("Cleaning regulatory elements data...")
     
-    if (REGULATORY_ELEMENTS_ANNOTATION_REFERENCE_PATH[-3:] == "gff"):
+    regulatory_elements["Chromosome"] = regulatory_elements["Chromosome"].apply(lambda x : x[3:])
         
-        regulatory_elements = regulatory_elements.drop(regulatory_elements[regulatory_elements["Type"] != "enhancer"].index)
-        #regulatory_elements["Enhancer_ID"] = regulatory_elements["Attributes"].apply(lambda x : re.findall("ID=enhancer:(.*?);", x)[0])
-        regulatory_elements = regulatory_elements.drop(["Source", "Type", "Score", "Strand", "Phase", "Attributes"], axis = 1)
-        
-    elif (REGULATORY_ELEMENTS_ANNOTATION_REFERENCE_PATH[-3:] == "bed"):
-        
-        regulatory_elements["Chromosome"] = regulatory_elements["Chromosome"].apply(lambda x : x[3:])
-        
-        enhancers = regulatory_elements[regulatory_elements["Flag"].isin(ENHANCER_EPIGENETIC_FLAGS_OF_INTEREST)]
-        enhancers = enhancers.drop(["Flag"], axis = 1)
-        
-        quiescent_regions = regulatory_elements[regulatory_elements["Flag"].isin(QUIESCENT_EPIGENETIC_FLAGS_OF_INTEREST)]
-        quiescent_regions = quiescent_regions.drop(["Flag"], axis = 1)
-        
-    else:
-        print("Could not clean regulatory data.")
+    enhancers = regulatory_elements[regulatory_elements["Flag"].isin(ENHANCER_EPIGENETIC_FLAGS_OF_INTEREST)]
+    enhancers = enhancers.drop(["Flag"], axis = 1)
+
+    quiescent_regions = regulatory_elements[regulatory_elements["Flag"].isin(QUIESCENT_EPIGENETIC_FLAGS_OF_INTEREST)]
+    quiescent_regions = quiescent_regions.drop(["Flag"], axis = 1)
         
     return enhancers, quiescent_regions
-
-def merge_annotation_expression(gene_annotation_data, general_expression_data, specific_expression_data):
-    
-    #Joins all previously created dataframes into one, alligned by the gene
-    #names, columns are renamed to be more descriptive
-    
-    print("Merging annotations and expression data...")
-
-    gene_data = pd.merge(gene_annotation_data, general_expression_data, on = "Gene_name", how = "inner")
-    gene_data = pd.merge(gene_data, specific_expression_data, on = "Gene_name", how = "inner")
-    gene_data = gene_data.rename(columns = {"Start" : "Gene_start", "End" : "Gene_end"})
-    
-    return(gene_data)
