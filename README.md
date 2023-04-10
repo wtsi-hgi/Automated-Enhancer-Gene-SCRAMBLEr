@@ -8,7 +8,7 @@ After identifying one gene (OTX2) which was suitable, Jonas has approached HGI t
   - Finding pegRNA insertion sites
   - Designing pegRNA sequences
   
-Prioritise the genes of interest
+## Prioritise the genes of interest
 For this step, a number of metrics need to found for each gene, so that they can be compared and filtered to find the genes of interest.
   - Whether the gene is a housekeeping gene
       As a first approach for finding this, I will find the standard deviation of expression between cell lines. Jonas has provided a table of expression of many genes in many cell lines.
