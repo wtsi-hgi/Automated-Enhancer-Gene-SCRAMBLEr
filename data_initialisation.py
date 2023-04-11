@@ -147,53 +147,7 @@ def read_gene_annotations():
         
     except:
         print("ERROR: Gene annotations file could not be read.")
-        
-def read_general_expression_data():
-    
-    #Assigns the expression-for-many-cell-types csv file to a pandas dataframe.
-        
-    print("Reading general expression file...")
 
-    try:
-        general_expression_data = pd.read_csv(GENERAL_EXPRESSION_BY_CELL_LINE_REFERENCE_PATH).transpose()
-        
-        return clean_general_expression_data(general_expression_data)  
-    
-    except:
-        print("ERROR: General expression data could not be read.")
-        
-def read_specific_expression_data():
-    
-    #Assigns the expression-for-cell-line-of-interest csv file to a pandas dataframe.
-        
-    print("Reading specific expression file...")
-
-    try:
-        specific_expression_data = pd.read_csv(SPECIFIC_EXPRESSION_BY_CELL_LINE_REFERENCE_PATH,
-                                               sep = "\t",
-                                               names = ["Gene_name", "Specific_gene_expression"],
-                                               skiprows = 1)
-        
-        return clean_specific_expression_data(specific_expression_data)    
-    
-    except:
-        print("ERROR: Specific expression data could not be read.")
-         
-def read_regulatory_elements():
-    
-    #Assigns the regulatory elements gff or bed file to a pandas dataframe.
-    
-    print("Reading regulatory elements file...")
-
-    try:
-        regulatory_elements = pd.read_csv(REGULATORY_ELEMENTS_ANNOTATION_REFERENCE_PATH, sep = "\t",
-                                              names = ["Chromosome", "Start", "End", "Flag"])
-        
-        return regulatory_elements    
-    
-    except:
-        print("ERROR: Could not read regulatory elements file.")
-        
 def clean_genes(gene_annotations):
     
     #Cleans genetic annotations dataframe by removing chromosomes that are not
@@ -214,6 +168,20 @@ def clean_genes(gene_annotations):
     
     return gene_annotations
 
+def read_general_expression_data():
+    
+    #Assigns the expression-for-many-cell-types csv file to a pandas dataframe.
+        
+    print("Reading general expression file...")
+
+    try:
+        general_expression_data = pd.read_csv(GENERAL_EXPRESSION_BY_CELL_LINE_REFERENCE_PATH).transpose()
+        
+        return clean_general_expression_data(general_expression_data)  
+    
+    except:
+        print("ERROR: General expression data could not be read.")
+        
 def clean_general_expression_data(general_expression_data):
     
     #Cleans the general expression data by dropping irrelevant non-numeric
@@ -235,9 +203,26 @@ def clean_general_expression_data(general_expression_data):
     general_expression_data = general_expression_data[["Gene_name", "General_gene_expression", "Mean", "Std", "Anomalous_score"]]
     general_expression_data = general_expression_data.drop_duplicates(keep = False, subset = ["Gene_name"])
     
-    return general_expression_data
+    return general_expression_data        
+        
+def read_specific_expression_data():
+    
+    #Assigns the expression-for-cell-line-of-interest csv file to a pandas dataframe.
+        
+    print("Reading specific expression file...")
 
-def clean_specific_expression_data(specific_expression_data):
+    try:
+        specific_expression_data = pd.read_csv(SPECIFIC_EXPRESSION_BY_CELL_LINE_REFERENCE_PATH,
+                                               sep = "\t",
+                                               names = ["Gene_name", "Specific_gene_expression"],
+                                               skiprows = 1)
+        
+        return clean_specific_expression_data(specific_expression_data)    
+    
+    except:
+        print("ERROR: Specific expression data could not be read.")
+        
+ def clean_specific_expression_data(specific_expression_data):
     
     #Cleans the expression data specific to the cell line of interest by turning
     #minus infinite strings into a floating point representation of negative
@@ -250,7 +235,22 @@ def clean_specific_expression_data(specific_expression_data):
     #specific_expression_data["Specific_gene_expression"] = specific_expression_data["Specific_gene_expression"].apply(lambda expression : np.NINF if expression == "-Inf" else expression)
     specific_expression_data = specific_expression_data.drop_duplicates(keep = False, subset = ["Gene_name"])
     
-    return specific_expression_data
+    return specific_expression_data     
+   
+def read_regulatory_elements():
+    
+    #Assigns the regulatory elements gff or bed file to a pandas dataframe.
+    
+    print("Reading regulatory elements file...")
+
+    try:
+        regulatory_elements = pd.read_csv(REGULATORY_ELEMENTS_ANNOTATION_REFERENCE_PATH, sep = "\t",
+                                              names = ["Chromosome", "Start", "End", "Flag"])
+        
+        return regulatory_elements    
+    
+    except:
+        print("ERROR: Could not read regulatory elements file.")
 
 def clean_regulatory_elements(regulatory_elements):
     
