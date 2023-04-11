@@ -10,12 +10,8 @@ def main():
     
     di.read_config_file()
     gene_annotations = di.read_gene_annotations()
-    #gene_annotations = di.clean_genes(gene_annotations)
     general_expression_data = di.read_general_expression_data()
     specific_expression_data = di.read_specific_expression_data()
-    #general_expression_data = di.clean_general_expression_data(general_expression_data)
-    #specific_expression_data = di.clean_specific_expression_data(specific_expression_data)
-    #gene_data = di.merge_annotation_expression(gene_annotations, general_expression_data, specific_expression_data)
     gene_data = pd.merge(gene_annotations, general_expression_data, on = "Gene_name", how = "inner")
     gene_data = pd.merge(gene_data, specific_expression_data, on = "Gene_name", how = "inner")
     
