@@ -65,19 +65,19 @@ def find_interferring_genes(gene_data):
     
     interferring_genes_pr = pr.PyRanges(gene_data.loc[gene_data["Specific_gene_expression"] > di.CELL_LINE_SPECIFIC_EXPRESSION_THRESHOLD])
     genes_pr = pr.PyRanges(gene_data)
-    genes_nearest_upstream_pr = genes_pr.nearest(interferring_genes_pr, how = "upstream", suffix = "_upstream_interferrering_gene", overlap = di.INTERFERRING_GENE_OVERLAPS)
-    genes_nearest_downstream_pr = genes_pr.nearest(interferring_genes_pr, how = "downstream", suffix = "_downstream_interferrering_gene", overlap = di.INTERFERRING_GENE_OVERLAPS)
+    genes_nearest_upstream_pr = genes_pr.nearest(interferring_genes_pr, how = "upstream", suffix = "_upstream_interferring_gene", overlap = di.INTERFERRING_GENE_OVERLAPS)
+    genes_nearest_downstream_pr = genes_pr.nearest(interferring_genes_pr, how = "downstream", suffix = "_downstream_interferring_gene", overlap = di.INTERFERRING_GENE_OVERLAPS)
 
     genes_nearest_upstream = genes_nearest_upstream_pr.df
     genes_nearest_downstream = genes_nearest_downstream_pr.df
     
-    gene_data = pd.merge(gene_data, genes_nearest_upstream.loc[:, ["Gene_name", "Upstream_interferrering_gene_start", "Upstream_interferrering_gene_end", "Upstream_interferrering_gene_name"]], on = "Gene_name", how = "inner")
-    gene_data = pd.merge(gene_data, genes_nearest_downstream.loc[:, ["Gene_name", "Downstream_interferrering_gene_start", "Downstream_interferrering_gene_end", "Downstream_interferrering_gene_name"]], on = "Gene_name", how = "inner")
+    gene_data = pd.merge(gene_data, genes_nearest_upstream.loc[:, ["Gene_name", "Start_upstream_interferring_gene", "End_upstream_interferring_gene", "Gene_name_upstream_interferring_gene"]], on = "Gene_name", how = "inner")
+    gene_data = pd.merge(gene_data, genes_nearest_downstream.loc[:, ["Gene_name", "Start_downstream_interferring_gene", "End_downstream_interferring_gene", "Gene_name_downstream_interferring_gene"]], on = "Gene_name", how = "inner")
     
     if di.INTERFERRING_GENE_OVERLAPS == False:
         
-        gene_data = gene_data.loc[gene_data["Upstream_interferrering_gene_end"] < gene_data["Gene_start"]]
-        gene_data = gene_data.loc[gene_data["Downstream_interferrering_gene_start"] > gene_data["Gene_end"]]
+        gene_data = gene_data.loc[gene_data["End_upstream_interferring_gene"] < gene_data["Gene_start"]]
+        gene_data = gene_data.loc[gene_data["Start_downstream_interferring_gene"] > gene_data["Gene_end"]]
         
     gene_data.drop(["Start", "End"], axis = 1)
         
@@ -98,8 +98,8 @@ def find_search_windows(genes):
         genes["Search_window_start"] = genes.apply(lambda gene : gene["Gene_start"] - di.UPSTREAM_SEARCH if gene["Strand"] == "+" else gene["Gene_start"] - di.DOWNSTREAM_SEARCH, axis = 1)
         genes["Search_window_end"] = genes.apply(lambda gene : gene["Gene_end"] + di.DOWNSTREAM_SEARCH if gene["Strand"] == "+" else gene["Gene_end"] + di.UPSTREAM_SEARCH, axis = 1)
         genes["Search_window_start"] = genes.apply(lambda gene : 0 if gene["Gene_start"] < 0 else gene["Search_window_start"], axis = 1)
-        genes["Search_window_start"] = genes.apply(lambda gene : gene["Upstream_interferrering_gene_end"] if gene["Search_window_start"] < gene["Upstream_interferrering_gene_end"] else gene["Search_window_start"], axis = 1)
-        genes["Search_window_end"] = genes.apply(lambda gene : gene["Downstream_interferrering_gene_start"] if gene["Search_window_end"] > gene["Downstream_interferrering_gene_start"] else gene["Search_window_end"], axis = 1)
+        genes["Search_window_start"] = genes.apply(lambda gene : gene["End_upstream_interferring_gene"] if gene["Search_window_start"] < gene["End_upstream_interferring_gene"] else gene["Search_window_start"], axis = 1)
+        genes["Search_window_end"] = genes.apply(lambda gene : gene["Start_downstream_interferring_gene"] if gene["Search_window_end"] > gene["Start_downstream_interferring_gene"] else gene["Search_window_end"], axis = 1)
             
         genes["Search_window_size"] = (genes["Search_window_end"] - genes["Search_window_start"])
         
@@ -110,13 +110,13 @@ def find_search_windows(genes):
         search_upstreams["Upstream_search_window_end"] = search_upstreams["Gene_start"]
         search_upstreams["Upstream_search_window_start"] = search_upstreams.apply(lambda upstream : upstream["Upstream_search_window_end"] - di.UPSTREAM_SEARCH if upstream["Strand"] == "+" else upstream["Upstream_search_window_end"] - di.DOWNSTREAM_SEARCH, axis = 1)
         search_upstreams["Upstream_search_window_start"] = search_upstreams.apply(lambda upstream : 0 if upstream["Upstream_search_window_start"] < 0 else upstream["Upstream_search_window_start"], axis = 1)
-        search_upstreams["Upstream_search_window_start"] = search_upstreams.apply(lambda upstream : upstream["End_upstream_interferrer"] if upstream["Upstream_search_window_start"] < upstream["End_upstream_interferrer"] else upstream["Upstream_search_window_start"], axis = 1)
+        search_upstreams["Upstream_search_window_start"] = search_upstreams.apply(lambda upstream : upstream["End_upstream_interferring_gene"] if upstream["Upstream_search_window_start"] < upstream["End_upstream_interferring_gene"] else upstream["Upstream_search_window_start"], axis = 1)
         
         search_upstreams["Upstream_search_window_size"] = search_upstreams["Upstream_search_window_end"] - search_upstreams["Upstream_search_window_start"]
         
         search_downstreams["Downstream_search_window_start"] = search_downstreams["Gene_end"]
         search_downstreams["Downstream_search_window_end"] = search_downstreams.apply(lambda downstream : downstream["Downstream_search_window_start"] + di.DOWNSTREAM_SEARCH if downstream.Strand == "+" else downstream["Downstream_search_window_start"] + di.UPSTREAM_SEARCH, axis = 1)
-        search_downstreams["Downstream_search_window_end"] = search_downstreams.apply(lambda downstream : downstream["Start_downstream_interferrer"] if downstream["Downstream_search_window_end"] > downstream["Start_downstream_interferrer"] else downstream["Downstream_search_window_end"], axis = 1)
+        search_downstreams["Downstream_search_window_end"] = search_downstreams.apply(lambda downstream : downstream["Start_downstream_interferring_gene"] if downstream["Downstream_search_window_end"] > downstream["Start_downstream_interferrer"] else downstream["Downstream_search_window_end"], axis = 1)
         
         search_downstreams["Downstream_search_window_size"] = search_downstreams["Downstream_search_window_end"] - search_downstreams["Downstream_search_window_start"]
         
@@ -128,8 +128,8 @@ def find_search_windows(genes):
         genes["Search_window_start"] = genes.apply(lambda gene : gene["Gene_start"] - di.UPSTREAM_SEARCH if gene["Strand"] == "+" else gene["Gene_start"] - di.DOWNSTREAM_SEARCH, axis = 1)
         genes["Search_window_end"] = genes.apply(lambda gene : gene["Gene_start"] + di.DOWNSTREAM_SEARCH if gene["Strand"] == "+" else gene["Gene_start"] + di.UPSTREAM_SEARCH, axis = 1)
         genes["Search_window_start"] = genes.apply(lambda gene : 0 if gene.Start < 0 else gene.Start, axis = 1)
-        genes["Search_window_start"] = genes.apply(lambda gene : gene["End_upstream_interferrer"] if gene["Search_window_start"] < gene["End_upstream_interferrer"] else gene["Search_window_start"], axis = 1)
-        genes["Search_window_end"] = genes.apply(lambda gene : gene["Start_downstream_interferrer"] if gene["Search_window_end"] > gene["Start_downstream_interferrer"] else gene["Search_window_end"], axis = 1)
+        genes["Search_window_start"] = genes.apply(lambda gene : gene["End_upstream_interferring_gene"] if gene["Search_window_start"] < gene["End_upstream_interferring_gene"] else gene["Search_window_start"], axis = 1)
+        genes["Search_window_end"] = genes.apply(lambda gene : gene["Start_downstream_interferring_gene"] if gene["Search_window_end"] > gene["Start_downstream_interferring_gene"] else gene["Search_window_end"], axis = 1)
         
         genes["Search_window_size"] = (genes["Search_window_end"] - genes["Search_window_start"])
         

@@ -15,9 +15,8 @@ def define_step_function_of_element_overlaps_within_search_window(gene_data, ove
     
     gene_data["Search_window_start", "Search_window_end"] = gene_data["Search_window_start", "Search_window_end"].astype("int")
 
-    gene_data[
-        (region_name + "_step_function_x"), 
-        (region_name + "_step_function_y")] = [np.empty(0, dtype = float)] * len(gene_data)
+    gene_data[(region_name + "_step_function_x")] = [np.empty(0, dtype = float)] * len(gene_data)
+    gene_data[(region_name + "_step_function_y")] = [np.empty(0, dtype = float)] * len(gene_data)
 
 def convolution(genes_search, overlaps, region_name):
     
@@ -31,11 +30,10 @@ def convolution(genes_search, overlaps, region_name):
     genes_search["Search_window_start"] = genes_search["Search_window_start"].astype("int")
     genes_search["Search_window_end"] = genes_search["Search_window_end"].astype("int")
     
-    genes_search[
-        (region_name + "_searched_coordinates"), 
-        (region_name + "_step_function"), 
-        (region_name + "_convolution"), 
-        (region_name + "_convolved_coordinates")] = [np.empty(0, dtype = float)] * len(genes_search)
+    genes_search[(region_name + "_searched_coordinates")] = [np.empty(0, dtype = float)] * len(genes_search)
+    genes_search[(region_name + "_step_function")] = [np.empty(0, dtype = float)] * len(genes_search)
+    genes_search[(region_name + "_convolution")] = [np.empty(0, dtype = float)] * len(genes_search)
+    genes_search[(region_name + "_convolved_coordinates")] = [np.empty(0, dtype = float)] * len(genes_search)
 
     genes_search = genes_search.sort_values("Interest_score", ascending = False).reset_index(drop = True)
     
@@ -119,7 +117,9 @@ def find_plateaus(gene_data):
     #separate the search window into regions based on the y-value of each
     #convolved base.
     
-    gene_data["Plateau_coordinates", "Plateau_starts", "Plateau_ends"] = ""
+    gene_data["Plateau_coordinates"] = ""
+    gene_data["Plateau_starts"] = ""
+    gene_data["Plateau_ends"] = ""
     
     gene_data = gene_data.sort_values("Interest_score", ascending = False)
     
