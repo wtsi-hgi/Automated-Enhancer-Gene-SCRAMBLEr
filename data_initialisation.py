@@ -252,21 +252,45 @@ def read_regulatory_elements():
     except:
         print("ERROR: Could not read regulatory elements file.")
 
-def clean_regulatory_elements(regulatory_elements):
+#def clean_regulatory_elements(regulatory_elements):
     
     #Clean the regulatory elements dataframe by removing "chr" from chromosome
     #strings, including only regulatory elements from within flags of interest,
     #separately creating a quiescent dataframe in the same
     #way
     
-    print("Cleaning regulatory elements data...")
+#    print("Cleaning regulatory elements data...")
     
-    regulatory_elements["Chromosome"] = regulatory_elements["Chromosome"].apply(lambda x : x[3:])
+#    regulatory_elements["Chromosome"] = regulatory_elements["Chromosome"].apply(lambda x : x[3:])
         
-    enhancers = regulatory_elements[regulatory_elements["Flag"].isin(ENHANCER_EPIGENETIC_FLAGS_OF_INTEREST)]
-    enhancers = enhancers.drop(["Flag"], axis = 1)
+#    enhancers = regulatory_elements[regulatory_elements["Flag"].isin(ENHANCER_EPIGENETIC_FLAGS_OF_INTEREST)]
+#    enhancers = enhancers.drop(["Flag"], axis = 1)
 
-    quiescent_regions = regulatory_elements[regulatory_elements["Flag"].isin(QUIESCENT_EPIGENETIC_FLAGS_OF_INTEREST)]
-    quiescent_regions = quiescent_regions.drop(["Flag"], axis = 1)
+#    quiescent_regions = regulatory_elements[regulatory_elements["Flag"].isin(QUIESCENT_EPIGENETIC_FLAGS_OF_INTEREST)]
+#    quiescent_regions = quiescent_regions.drop(["Flag"], axis = 1)
         
-    return enhancers, quiescent_regions
+#    return enhancers, quiescent_regions
+
+def clean_regulatory_elements(regulatory_elements, element_type):
+    
+    #Clean the regulatory elements dataframe by removing "chr" from chromosome
+    #strings, including only regulatory elements from within flags of interest
+    
+    print("Cleaning " + element_type + " elements data...")
+    
+    if element_type == "enhancer":
+        
+        flags_of_interest = ENHANCER_EPIGENETIC_FLAGS_OF_INTEREST
+        
+    elif element_type == "quiescent":
+    
+        flags_of_interest = QUIESCENT_EPIGENETIC_FLAGS_OF_INTEREST
+        
+    else: print("ERROR : Unrecognised regulatory element type.")
+        
+    regulatory_elements["Chromosome"] = regulatory_elements["Chromosome"].apply(lambda x : x[3:])
+    
+    regulatory_elements = regulatory_elements[regulatory_elements["Flag"].isin(flags_of_interest)]
+    regulatory_elements = regulatory_elements.drop(["Flag"], axis = 1)
+    
+    return regulatory_elements

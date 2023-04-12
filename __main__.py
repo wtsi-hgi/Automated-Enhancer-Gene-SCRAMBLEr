@@ -22,13 +22,11 @@ def main():
     gene_data = fm.find_search_windows(gene_data)
     
     regulatory_elements = di.read_regulatory_elements()
-    enhancers, quiescent_regions = di.clean_regulatory_elements(regulatory_elements)
+    enhancers = di.clean_regulatory_elements(regulatory_elements, "enhancer")
     del regulatory_elements
     
     enhancer_overlaps = fm.find_element_overlaps_within_search_window(enhancers, gene_data)
-    if di.QUIESCENT_CONVOLUTION == True:
-        quiescent_overlaps = fm.find_element_overlaps_within_search_window(quiescent_regions, gene_data)
-    del enhancers, quiescent_regions
+    del enhancers
     
     gene_data = fm.count_overlaps_per_gene(gene_data, enhancer_overlaps, "Enhancer")
     gene_data = fm.find_nearby_enhancer_densities(gene_data, enhancer_overlaps)
@@ -36,9 +34,6 @@ def main():
     
     gene_data = rc.convolution(gene_data, enhancer_overlaps, "Enhancer")
 
-    if di.QUIESCENT_CONVOLUTION == True:
-        gene_data = rc.quiescent_convolution(gene_data, quiescent_overlaps)
-        del quiescent_overlaps
     del enhancer_overlaps
     
     gene_data = rc.find_plateaus(gene_data)
