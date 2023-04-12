@@ -64,17 +64,6 @@ def convolution(genes_search, overlaps, region_name):
         
     return genes_search
 
-
-def combine_convolutions(enhancer_convolution, quiescent_convolution):
-    
-    print("Merging convolutions...")
-
-    #enhancer_convolution = np.negative(enhancer_convolution)
-    #print(enhancer_convolution)
-    #recombination_convolution = np.add((enhancer_convolution * di.ENHANCER_CONVOLUTION_WEIGHT), (quiescent_convolution * di.QUIESCENT_CONVOLUTION_WEIGHT))
-    
-    return overall_convolution
-
 def get_kernel(kernel_shape, size, sigma):
     
     #Kernel is generated as numpy array depending on desired shape and size
@@ -94,6 +83,16 @@ def get_kernel(kernel_shape, size, sigma):
         raise Exception("Kernel shape is neither Flat nor Guassian")
         
     return kernel
+
+def combine_convolutions(enhancer_convolution, quiescent_convolution):
+    
+    print("Merging convolutions...")
+
+    #enhancer_convolution = np.negative(enhancer_convolution)
+    #print(enhancer_convolution)
+    #recombination_convolution = np.add((enhancer_convolution * di.ENHANCER_CONVOLUTION_WEIGHT), (quiescent_convolution * di.QUIESCENT_CONVOLUTION_WEIGHT))
+    
+    return overall_convolution
     
 def export_convolutions(gene_data):
     

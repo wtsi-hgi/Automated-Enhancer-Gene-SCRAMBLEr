@@ -181,7 +181,7 @@ def read_general_expression_data():
     
     except:
         print("ERROR: General expression data could not be read.")
-        
+
 def clean_general_expression_data(general_expression_data):
     
     #Cleans the general expression data by dropping irrelevant non-numeric
@@ -222,7 +222,7 @@ def read_specific_expression_data():
     except:
         print("ERROR: Specific expression data could not be read.")
         
- def clean_specific_expression_data(specific_expression_data):
+def clean_specific_expression_data(specific_expression_data):
     
     #Cleans the expression data specific to the cell line of interest by turning
     #minus infinite strings into a floating point representation of negative
