@@ -174,5 +174,5 @@ def export_plateaus(gene_data):
         plateau_regions["Strand"] = gene["Strand"]
         
         #plateau_regions = ss.find_fasta(plateau_regions)
-        #plateau_regions.to_csv((di.RESULTS_DIRECTORY + "plateaus_test.bed"), sep = "\t", index = False, columns = ["Chromosome", "Start", "End", "Gene_name", "Strand", "Sequence"], mode = "a")
+        
         plateau_regions.to_csv((di.RESULTS_DIRECTORY + "plateaus.bed"), sep = "\t", index = False, columns = ["Chromosome", "Start", "End", "Gene_name"], mode = "a", header = False)

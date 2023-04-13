@@ -59,7 +59,8 @@ def find_interferring_genes(gene_data):
     print("Finding interferring genes...")
     
     #"Start" and "End" are generated for use with PyRanges
-    #module, but are removed at the end of function
+    #module which requires temporary columns "Start" and "End",
+    #they are removed at the end of function
     gene_data["Start"] = gene_data["Gene_start"]
     gene_data["End"] = gene_data["Gene_end"]
     
