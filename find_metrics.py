@@ -61,6 +61,7 @@ def find_interferring_genes(gene_data):
     #"Start" and "End" are generated for use with PyRanges
     #module which requires temporary columns "Start" and "End",
     #they are removed at the end of function
+    
     gene_data["Start"] = gene_data["Gene_start"]
     gene_data["End"] = gene_data["Gene_end"]
     
@@ -94,54 +95,18 @@ def find_search_windows(genes):
 
     print("Finding sites to define search window...") 
     
-    if (di.SEARCH_TYPE == "whole_gene" and di.SEARCH_WITHIN_GENE == True):
+    if (di.SEARCH_TYPE == "whole_gene"): downstream_search_start = "Gene_end"
+    elif (di.SEARCH_TYPE == "start_site"): downstream_search_start = 'Gene_start'
+    else: print("ERROR : Invalid search type.")
         
-        genes["Search_window_start"] = genes.apply(lambda gene : gene["Gene_start"] - di.UPSTREAM_SEARCH if gene["Strand"] == "+" else gene["Gene_start"] - di.DOWNSTREAM_SEARCH, axis = 1)
-        genes["Search_window_end"] = genes.apply(lambda gene : gene["Gene_end"] + di.DOWNSTREAM_SEARCH if gene["Strand"] == "+" else gene["Gene_end"] + di.UPSTREAM_SEARCH, axis = 1)
-        genes["Search_window_start"] = genes.apply(lambda gene : 0 if gene["Gene_start"] < 0 else gene["Search_window_start"], axis = 1)
-        genes["Search_window_start"] = genes.apply(lambda gene : gene["End_upstream_interferring_gene"] if gene["Search_window_start"] < gene["End_upstream_interferring_gene"] else gene["Search_window_start"], axis = 1)
-        genes["Search_window_end"] = genes.apply(lambda gene : gene["Start_downstream_interferring_gene"] if gene["Search_window_end"] > gene["Start_downstream_interferring_gene"] else gene["Search_window_end"], axis = 1)
-            
-        genes["Search_window_size"] = (genes["Search_window_end"] - genes["Search_window_start"])
+    genes["Search_window_start"] = genes.apply(lambda gene : gene["Gene_start"] - di.UPSTREAM_SEARCH if gene["Strand"] == "+" else gene["Gene_start"] - di.DOWNSTREAM_SEARCH, axis = 1)
+    genes["Search_window_end"] = genes.apply(lambda gene : gene[downstream_search_start] + di.DOWNSTREAM_SEARCH if gene["Strand"] == "+" else gene[downstream_search_start] + di.UPSTREAM_SEARCH, axis = 1)
+    genes["Search_window_start"] = genes.apply(lambda gene : 0 if gene["Gene_start"] < 0 else gene["Search_window_start"], axis = 1)
+    genes["Search_window_start"] = genes.apply(lambda gene : gene["End_upstream_interferring_gene"] if gene["Search_window_start"] < gene["End_upstream_interferring_gene"] else gene["Search_window_start"], axis = 1)
+    genes["Search_window_end"] = genes.apply(lambda gene : gene["Start_downstream_interferring_gene"] if gene["Search_window_end"] > gene["Start_downstream_interferring_gene"] else gene["Search_window_end"], axis = 1)
         
-    elif (di.SEARCH_TYPE == "whole_gene" and di.SEARCH_WITHIN_GENE == False):
-
-        search_upstreams = genes
-        search_downstreams = genes
-        search_upstreams["Upstream_search_window_end"] = search_upstreams["Gene_start"]
-        search_upstreams["Upstream_search_window_start"] = search_upstreams.apply(lambda upstream : upstream["Upstream_search_window_end"] - di.UPSTREAM_SEARCH if upstream["Strand"] == "+" else upstream["Upstream_search_window_end"] - di.DOWNSTREAM_SEARCH, axis = 1)
-        search_upstreams["Upstream_search_window_start"] = search_upstreams.apply(lambda upstream : 0 if upstream["Upstream_search_window_start"] < 0 else upstream["Upstream_search_window_start"], axis = 1)
-        search_upstreams["Upstream_search_window_start"] = search_upstreams.apply(lambda upstream : upstream["End_upstream_interferring_gene"] if upstream["Upstream_search_window_start"] < upstream["End_upstream_interferring_gene"] else upstream["Upstream_search_window_start"], axis = 1)
-        
-        search_upstreams["Upstream_search_window_size"] = search_upstreams["Upstream_search_window_end"] - search_upstreams["Upstream_search_window_start"]
-        
-        search_downstreams["Downstream_search_window_start"] = search_downstreams["Gene_end"]
-        search_downstreams["Downstream_search_window_end"] = search_downstreams.apply(lambda downstream : downstream["Downstream_search_window_start"] + di.DOWNSTREAM_SEARCH if downstream.Strand == "+" else downstream["Downstream_search_window_start"] + di.UPSTREAM_SEARCH, axis = 1)
-        search_downstreams["Downstream_search_window_end"] = search_downstreams.apply(lambda downstream : downstream["Start_downstream_interferring_gene"] if downstream["Downstream_search_window_end"] > downstream["Start_downstream_interferrer"] else downstream["Downstream_search_window_end"], axis = 1)
-        
-        search_downstreams["Downstream_search_window_size"] = search_downstreams["Downstream_search_window_end"] - search_downstreams["Downstream_search_window_start"]
-        
-        genes = pd.merge(search_upstreams, search_downstreams)
-        genes["Search_window_size"] = genes["Upstream_search_window_size"] + genes["Downstream_search_window_size"]
-        
-    elif (di.SEARCH_TYPE == "start_site" and di.SEARCH_WITHIN_GENE == True):
-        
-        genes["Search_window_start"] = genes.apply(lambda gene : gene["Gene_start"] - di.UPSTREAM_SEARCH if gene["Strand"] == "+" else gene["Gene_start"] - di.DOWNSTREAM_SEARCH, axis = 1)
-        genes["Search_window_end"] = genes.apply(lambda gene : gene["Gene_start"] + di.DOWNSTREAM_SEARCH if gene["Strand"] == "+" else gene["Gene_start"] + di.UPSTREAM_SEARCH, axis = 1)
-        genes["Search_window_start"] = genes.apply(lambda gene : 0 if gene.Start < 0 else gene.Start, axis = 1)
-        genes["Search_window_start"] = genes.apply(lambda gene : gene["End_upstream_interferring_gene"] if gene["Search_window_start"] < gene["End_upstream_interferring_gene"] else gene["Search_window_start"], axis = 1)
-        genes["Search_window_end"] = genes.apply(lambda gene : gene["Start_downstream_interferring_gene"] if gene["Search_window_end"] > gene["Start_downstream_interferring_gene"] else gene["Search_window_end"], axis = 1)
-        
-        genes["Search_window_size"] = (genes["Search_window_end"] - genes["Search_window_start"])
-        
-    elif (di.SEARCH_TYPE == "start_site" and di.SEARCH_WITHIN_GENE == False):
-        
-        print("Cannot currently perform this search type - search within gene combination")
-        #genes_search["End"] = genes_search['Start']
-        #genes_search["Start"] = genes_search.apply(lambda gene : gene.Start - upstream_search if gene.Strand == "+" else gene.Start - downstream_search, axis = 1)
-        #genes_search["End"] = genes_search.apply(lambda gene : gene.End + downstream_search if gene.Strand == "+" else gene.End + upstream_search, axis = 1)
-        #genes_search["Start"] = genes_search.apply(lambda gene : 0 if gene.Start < 0 else gene.Start, axis = 1)
-        
+    genes["Search_window_size"] = (genes["Search_window_end"] - genes["Search_window_start"])
+                
     return genes
     
 def find_element_overlaps_within_search_window(elements, genes):

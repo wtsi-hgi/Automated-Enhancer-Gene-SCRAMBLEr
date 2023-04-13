@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
 import pyranges as pr
-from scipy.signal import find_peaks
-import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter1d
 
 import data_initialisation as di
@@ -86,13 +84,15 @@ def get_kernel(kernel_shape, size, sigma):
 
 def combine_convolutions(enhancer_convolution, quiescent_convolution):
     
+    #Eventually will be used to add convolutions together
+    
     print("Merging convolutions...")
 
-    #enhancer_convolution = np.negative(enhancer_convolution)
-    #print(enhancer_convolution)
-    #recombination_convolution = np.add((enhancer_convolution * di.ENHANCER_CONVOLUTION_WEIGHT), (quiescent_convolution * di.QUIESCENT_CONVOLUTION_WEIGHT))
+    enhancer_convolution = np.negative(enhancer_convolution)
+    print(enhancer_convolution)
+    combined_convolution = np.add((enhancer_convolution * di.ENHANCER_CONVOLUTION_WEIGHT), (quiescent_convolution * di.QUIESCENT_CONVOLUTION_WEIGHT))
     
-    return overall_convolution
+    return combined_convolution
     
 def export_convolutions(gene_data):
     
@@ -138,22 +138,6 @@ def find_plateaus(gene_data):
         gene_data.at[index, "Plateau_coordinates"] = plateau_coordinates
         gene_data.at[index, "Plateau_starts"] = plateau_coordinates[::2]
         gene_data.at[index, "Plateau_ends"] = plateau_coordinates[1::2]
-        
-        #pre_threshold_crossings = np.diff(convolved_y < threshold, append = False)
-        #pre_threshold_crossings = np.argwhere(pre_threshold_crossings)[:, 0]
-        #pre_threshold_crossings = convolved_x[pre_threshold_crossings]
-        #pre_threshold_crossings = np.delete(pre_threshold_crossings, -1)
-        
-        #post_threshold_crossings = np.diff(convolved_y < threshold, prepend = False)
-        #post_threshold_crossings = np.argwhere(post_threshold_crossings)[:, 0]
-        #post_threshold_crossings = convolved_x[post_threshold_crossings]
-        #post_threshold_crossings = np.delete(post_threshold_crossings, 0)
-        
-        #plateau_starts = pre_threshold_crossings[::2]
-        #plateau_ends = post_threshold_crossings[1::2]
-        
-        #gene_data.at[index, "Plateau_starts"] = plateau_starts
-        #gene_data.at[index, "Plateau_ends"] = plateau_ends
         
     return gene_data
     

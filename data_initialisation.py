@@ -27,7 +27,6 @@ def read_config_file():
     global QUIESCENT_EPIGENETIC_FLAGS_OF_INTEREST
 
     global SEARCH_TYPE
-    global SEARCH_WITHIN_GENE
     global UPSTREAM_SEARCH
     global DOWNSTREAM_SEARCH
 
@@ -43,24 +42,17 @@ def read_config_file():
     global ABSOLUTE_ENHANCER_KERNEL_SIZE
     global RELATIVE_ENHANCER_KERNEL_SIZE
     global RELATIVE_ENHANCER_KERNEL_SIGMA
-    global MIN_ABSOLUTE_ENHANCER_CLUSTER_WIDTH
-    global MIN_ENHANCER_CLUSTER_PROMINENCE
     
     global QUIESCENT_KERNEL_SHAPE
     global QUIESCENT_KERNEL_SIZE_TYPE
     global ABSOLUTE_QUIESCENT_KERNEL_SIZE
     global RELATIVE_QUIESCENT_KERNEL_SIZE
     global RELATIVE_QUIESCENT_KERNEL_SIGMA
-    global MIN_ABSOLUTE_QUIESCENT_CLUSTER_WIDTH
-    global MIN_QUIESCENT_CLUSTER_PROMINENCE
 
-    global SIGMOIDAL_SLOPE
-    global SIGMOIDAL_MIDPOINT
     global CELL_LINE_SPECIFIC_EXPRESSION_THRESHOLD
     global INTERFERRING_GENE_OVERLAPS
     
     global ENHANCER_CONVOLUTION
-    global QUIESCENT_CONVOLUTION
     global ENHANCER_CONVOLUTION_WEIGHT
     global QUIESCENT_CONVOLUTION_WEIGHT
     global PLATEAU_THRESHOLD
@@ -85,7 +77,6 @@ def read_config_file():
         QUIESCENT_EPIGENETIC_FLAGS_OF_INTEREST = settings["quiescent_epigenetic_flags_of_interest"]
 
         SEARCH_TYPE = settings["search_type"]
-        SEARCH_WITHIN_GENE = settings["search_within_gene"]
         UPSTREAM_SEARCH = settings["upstream_search"]
         DOWNSTREAM_SEARCH = settings["downstream_search"]
 
@@ -101,24 +92,17 @@ def read_config_file():
         ABSOLUTE_ENHANCER_KERNEL_SIZE = settings["absolute_enhancer_kernel_size"]
         RELATIVE_ENHANCER_KERNEL_SIZE = settings["relative_enhancer_kernel_size"]
         RELATIVE_ENHANCER_KERNEL_SIGMA = settings["relative_enhancer_kernel_sigma"]
-        MIN_ABSOLUTE_ENHANCER_CLUSTER_WIDTH = settings["min_absolute_enhancer_cluster_width"]
-        MIN_ENHANCER_CLUSTER_PROMINENCE = settings["min_enhancer_cluster_prominence"]
 
         QUIESCENT_KERNEL_SHAPE = settings["quiescent_kernel_shape"]
         QUIESCENT_KERNEL_SIZE_TYPE = settings["quiescent_kernel_size_type"]
         ABSOLUTE_QUIESCENT_KERNEL_SIZE = settings["absolute_quiescent_kernel_size"]
         RELATIVE_QUIESCENT_KERNEL_SIZE = settings["relative_quiescent_kernel_size"]
         RELATIVE_QUIESCENT_KERNEL_SIGMA = settings["relative_quiescent_kernel_sigma"]
-        MIN_ABSOLUTE_QUIESCENT_CLUSTER_WIDTH = settings["min_absolute_quiescent_cluster_width"]
-        MIN_QUIESCENT_CLUSTER_PROMINENCE = settings["min_quiescent_cluster_prominence"]
 
-        SIGMOIDAL_SLOPE = settings["sigmoidal_slope"]
-        SIGMOIDAL_MIDPOINT = settings["sigmoidal_midpoint"]
         CELL_LINE_SPECIFIC_EXPRESSION_THRESHOLD = settings["cell_line_specific_expression_threshold"]
         INTERFERRING_GENE_OVERLAPS = settings["interferring_gene_overlaps"]
 
         ENHANCER_CONVOLUTION = settings["enhancer_convolution"]
-        QUIESCENT_CONVOLUTION = settings["quiescent_convolution"]
         ENHANCER_CONVOLUTION_WEIGHT = settings["enhancer_convolution_weight"]
         QUIESCENT_CONVOLUTION_WEIGHT = settings["quiescent_convolution_weight"]
         PLATEAU_THRESHOLD = settings["plateau_threshold"]
@@ -230,9 +214,7 @@ def clean_specific_expression_data(specific_expression_data):
     
     print("Cleaning specific expression data...")
     
-    #specific_expression_data = specific_expression_data.drop(specific_expression_data[specific_expression_data["Specific_gene_expression"] == "-Inf"].index)
     specific_expression_data["Specific_gene_expression"] = specific_expression_data["Specific_gene_expression"].apply(lambda expression : 0 if expression == "-Inf" else pow(2, expression))
-    #specific_expression_data["Specific_gene_expression"] = specific_expression_data["Specific_gene_expression"].apply(lambda expression : np.NINF if expression == "-Inf" else expression)
     specific_expression_data = specific_expression_data.drop_duplicates(keep = False, subset = ["Gene_name"])
     
     return specific_expression_data     
@@ -251,25 +233,6 @@ def read_regulatory_elements():
     
     except:
         print("ERROR: Could not read regulatory elements file.")
-
-#def clean_regulatory_elements(regulatory_elements):
-    
-    #Clean the regulatory elements dataframe by removing "chr" from chromosome
-    #strings, including only regulatory elements from within flags of interest,
-    #separately creating a quiescent dataframe in the same
-    #way
-    
-#    print("Cleaning regulatory elements data...")
-    
-#    regulatory_elements["Chromosome"] = regulatory_elements["Chromosome"].apply(lambda x : x[3:])
-        
-#    enhancers = regulatory_elements[regulatory_elements["Flag"].isin(ENHANCER_EPIGENETIC_FLAGS_OF_INTEREST)]
-#    enhancers = enhancers.drop(["Flag"], axis = 1)
-
-#    quiescent_regions = regulatory_elements[regulatory_elements["Flag"].isin(QUIESCENT_EPIGENETIC_FLAGS_OF_INTEREST)]
-#    quiescent_regions = quiescent_regions.drop(["Flag"], axis = 1)
-        
-#    return enhancers, quiescent_regions
 
 def clean_regulatory_elements(regulatory_elements, element_type):
     
