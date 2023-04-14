@@ -1,8 +1,7 @@
 import sys
-import re
 import json
+import re
 import pandas as pd
-import numpy as np
 
 import find_metrics as fm
 

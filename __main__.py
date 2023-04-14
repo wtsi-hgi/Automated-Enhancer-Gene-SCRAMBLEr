@@ -31,18 +31,16 @@ def main():
     gene_data = fm.count_overlaps_per_gene(gene_data, enhancer_overlaps, "Enhancer")
     gene_data = fm.find_nearby_enhancer_densities(gene_data, enhancer_overlaps)
     gene_data = fm.calculate_interest_score(gene_data)
-    
-    gene_data = rc.convolution(gene_data, enhancer_overlaps, "Enhancer")
-
+    gene_data = rc.define_step_function_of_element_overlaps_within_search_window(gene_data, enhancer_overlaps, "Enhancer")
+    gene_data = rc.convolve_step_function_to_average_windowed_density(gene_data, "Enhancer")
+    #gene_data = rc.convolution(gene_data, enhancer_overlaps, "Enhancer")
     del enhancer_overlaps
+    
+    print(gene_data.iloc[0])
     
     gene_data = rc.find_plateaus(gene_data)
     rc.export_convolutions(gene_data)
-    rc.export_plateaus(gene_data)
-    #dv.gene_report(gene_data)
-    
-    
-    #enhancer_convolution, recombination_convolution = rc.overlay_convolutions(rc.enhancer_convolution(gene_data, enhancer_overlaps), rc.quiescent_convolution(gene_data, quiescent_overlaps)) 
+    rc.export_plateaus(gene_data) 
     
 if __name__ == "__main__":
     main()
