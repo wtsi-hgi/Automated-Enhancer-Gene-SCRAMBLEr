@@ -30,13 +30,12 @@ def main():
     
     gene_data = fm.count_overlaps_per_gene(gene_data, enhancer_overlaps, "Enhancer")
     gene_data = fm.find_nearby_enhancer_densities(gene_data, enhancer_overlaps)
+    gene_data = fm.iterate_through_hard_filters(gene_data)
     gene_data = fm.calculate_interest_score(gene_data)
+    
     gene_data = rc.define_step_function_of_element_overlaps_within_search_window(gene_data, enhancer_overlaps, "Enhancer")
     gene_data = rc.convolve_step_function_to_average_windowed_density(gene_data, "Enhancer")
-    #gene_data = rc.convolution(gene_data, enhancer_overlaps, "Enhancer")
     del enhancer_overlaps
-    
-    print(gene_data.iloc[0])
     
     gene_data = rc.find_plateaus(gene_data)
     rc.export_convolutions(gene_data)

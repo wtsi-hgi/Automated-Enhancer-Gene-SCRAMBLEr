@@ -153,6 +153,50 @@ def find_nearby_enhancer_densities(gene_data, overlaps):
 
     return gene_data
     
+def apply_hard_filters(gene_data):
+    
+    if di.STD_MAX is not False: gene_data = gene_data.drop(gene_data[gene_data["Std"] > di.STD_MAX].index)
+    if di.STD_MIN is not False: gene_data = gene_data.drop(gene_data[gene_data["Std"] < di.STD_MIN].index)
+    if di.ANOMALOUS_EXPRESSION_MAX is not False: gene_data = gene_data.drop(gene_data[gene_data["Anomalous_score"] > di.ANOMALOUS_EXPRESSION_MAX].index)
+    if di.ANOMALOUS_EXPRESSION_MIN is not False: gene_data = gene_data.drop(gene_data[gene_data["Anomalous_score"] < di.ANOMALOUS_EXPRESSION_MIN].index)
+    if di.ENHANCER_COUNT_MAX is not False: gene_data = gene_data.drop(gene_data[gene_data["Enhancer_count"] > di.ENHANCER_COUNT_MAX].index)
+    if di.ENHANCER_COUNT_MIN is not False: gene_data = gene_data.drop(gene_data[gene_data["Enhancer_count"] < di.ENHANCER_COUNT_MIN].index)
+    if di.ENHANCER_PROPORTION_MAX is not False: gene_data = gene_data.drop(gene_data[gene_data["Enhancer_proportion"] > di.ENHANCER_PROPORTION_MAX].index)
+    if di.ENHANCER_PROPORTION_MIN is not False: gene_data = gene_data.drop(gene_data[gene_data["Enhancer_proportion"] < di.ENHANCER_PROPORTION_MIN].index)
+    if di.CELL_LINE_EXPRESSION_MAX is not False: gene_data = gene_data.drop(gene_data[gene_data["Specific_gene_expression"] > di.CELL_LINE_EXPRESSION_MAX].index)
+    if di.CELL_LINE_EXPRESSION_MIN is not False: gene_data = gene_data.drop(gene_data[gene_data["Specific_gene_expression"] < di.CELL_LINE_EXPRESSION_MIN].index)
+    if di.GENE_SIZE_MAX is not False: gene_data = gene_data.drop(gene_data[gene_data["Gene_size"] > di.GENE_SIZE_MAX].index)
+    if di.GENE_SIZE_MIN is not False: gene_data = gene_data.drop(gene_data[gene_data["Gene_size"] < di.GENE_SIZE_MIN].index) 
+    
+    return gene_data
+    
+def iterate_through_hard_filters(gene_data):
+    
+    print("Applying hard filters...")
+    
+    features = ["Std", "Anomalous_score", "Enhancer_count", "Enhancer_proportion", "Specific_gene_expression", "Gene_size"]
+    max_filters = [di.STD_MAX, di.ANOMALOUS_EXPRESSION_MAX, di.ENHANCER_COUNT_MAX, di.ENHANCER_PROPORTION_MAX, di.CELL_LINE_EXPRESSION_MAX, di.GENE_SIZE_MAX]
+    min_filters = [di.STD_MIN, di.ANOMALOUS_EXPRESSION_MIN, di.ENHANCER_COUNT_MIN, di.ENHANCER_PROPORTION_MIN, di.CELL_LINE_EXPRESSION_MIN, di.GENE_SIZE_MIN]
+    
+    for feature in features:
+        
+        gene_data = apply_hard_filter(gene_data, max_filters[features.index(feature)], feature, "max")
+        gene_data = apply_hard_filter(gene_data, min_filters[features.index(feature)], feature, "min")
+    
+    return gene_data
+
+def apply_hard_filter(gene_data, filter, feature, minmax):
+    
+    if minmax == "max":
+        
+        if filter is not False: gene_data = gene_data.drop(gene_data[gene_data[feature] > filter].index)
+        
+    else:
+        
+        if filter is not False: gene_data = gene_data.drop(gene_data[gene_data[feature] < filter].index)
+    
+    return gene_data
+    
 def calculate_interest_score(genes):
     
     #Various attributes of each gene are scaled and normallised, before being

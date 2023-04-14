@@ -29,6 +29,19 @@ def read_config_file():
     global UPSTREAM_SEARCH
     global DOWNSTREAM_SEARCH
 
+    global STD_MAX
+    global STD_MIN
+    global ANOMALOUS_EXPRESSION_MAX
+    global ANOMALOUS_EXPRESSION_MIN
+    global ENHANCER_COUNT_MAX
+    global ENHANCER_COUNT_MIN
+    global ENHANCER_PROPORTION_MAX
+    global ENHANCER_PROPORTION_MIN
+    global CELL_LINE_EXPRESSION_MAX
+    global CELL_LINE_EXPRESSION_MIN
+    global GENE_SIZE_MAX
+    global GENE_SIZE_MIN
+
     global STD_WEIGHT
     global ANOMALOUS_EXPRESSION_WEIGHT
     global ENHANCER_COUNT_WEIGHT
@@ -78,6 +91,19 @@ def read_config_file():
         SEARCH_TYPE = settings["search_type"]
         UPSTREAM_SEARCH = settings["upstream_search"]
         DOWNSTREAM_SEARCH = settings["downstream_search"]
+
+        STD_MAX = settings["std_hard_filter_max"]
+        STD_MIN = settings["std_hard_filter_min"]
+        ANOMALOUS_EXPRESSION_MAX = settings["anomalous_expression_hard_filter_max"]
+        ANOMALOUS_EXPRESSION_MIN = settings["anomalous_expression_hard_filter_min"]
+        ENHANCER_COUNT_MAX = settings["enhancer_count_hard_filter_max"]
+        ENHANCER_COUNT_MIN = settings["enhancer_count_hard_filter_min"]
+        ENHANCER_PROPORTION_MAX = settings["enhancer_proportion_hard_filter_max"]
+        ENHANCER_PROPORTION_MIN = settings["enhancer_proportion_hard_filter_min"]
+        CELL_LINE_EXPRESSION_MAX = settings["cell_line_expression_hard_filter_max"]
+        CELL_LINE_EXPRESSION_MIN = settings["cell_line_expression_hard_filter_min"]
+        GENE_SIZE_MAX = settings["gene_size_hard_filter_max"]
+        GENE_SIZE_MIN = settings["gene_size_hard_filter_min"]
 
         STD_WEIGHT = settings["relative_std_weight"]
         ANOMALOUS_EXPRESSION_WEIGHT = settings["relative_anomalous_expression_weight"]
