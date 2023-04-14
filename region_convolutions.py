@@ -18,9 +18,9 @@ def define_step_function_of_element_overlaps_within_search_window(gene_data, ove
 
     gene_data = gene_data.sort_values("Interest_score", ascending = False).reset_index(drop = True)
 
-    for index, gene in gene_data.head(di.ENHANCER_CONVOLUTION).iterrows():
+    for index, gene in gene_data.head(di.CONVOLUTION_LIMIT).iterrows():
         
-        print("Generating step function of " + element_type.lower() + "s for " + gene["Gene_name"] + " (" + str(index + 1) + " of " + str(di.ENHANCER_CONVOLUTION) + ")...")
+        print("Generating step function of " + element_type.lower() + "s for " + gene["Gene_name"] + " (" + str(index + 1) + " of " + str(di.CONVOLUTION_LIMIT) + ")...")
 
         gene_specific_overlaps = overlaps.loc[overlaps["Gene_name"] == gene["Gene_name"]]
         
@@ -48,7 +48,7 @@ def convolve_step_function_to_average_windowed_density(gene_data, element_type):
     
     gene_data = gene_data.sort_values("Interest_score", ascending = False).reset_index(drop = True)
 
-    for index, gene in gene_data.head(di.ENHANCER_CONVOLUTION).iterrows():
+    for index, gene in gene_data.head(di.CONVOLUTION_LIMIT).iterrows():
         
         kernel = get_kernel(di.ENHANCER_KERNEL_SHAPE, int((di.RELATIVE_ENHANCER_KERNEL_SIZE * (gene["Search_window_end"] - gene["Search_window_start"]))), int(di.RELATIVE_ENHANCER_KERNEL_SIGMA * (gene["Search_window_end"] - gene["Search_window_start"])))
         convolution_y = np.convolve(kernel, gene[(element_type + "_step_function_y")])
@@ -97,7 +97,7 @@ def export_convolutions(gene_data):
     
     print("Exporting enhancer density convolutions to wig file...")
     
-    for index, gene in gene_data.head(di.ENHANCER_CONVOLUTION).iterrows():
+    for index, gene in gene_data.head(di.CONVOLUTION_LIMIT).iterrows():
     
         with open((di.RESULTS_DIRECTORY + gene["Gene_name"] + "_convolutions.wiggle"), "w") as f:
             
@@ -119,9 +119,9 @@ def find_plateaus(gene_data):
     
     gene_data = gene_data.sort_values("Interest_score", ascending = False)
     
-    for index, gene in gene_data.head(di.ENHANCER_CONVOLUTION).iterrows():
+    for index, gene in gene_data.head(di.CONVOLUTION_LIMIT).iterrows():
         
-        print("Finding plateaus for gene " + gene["Gene_name"] + " (" + str(index + 1) + " of " + str(di.ENHANCER_CONVOLUTION) + ")...")
+        print("Finding plateaus for gene " + gene["Gene_name"] + " (" + str(index + 1) + " of " + str(di.CONVOLUTION_LIMIT) + ")...")
         
         convolved_x = gene["Enhancer_convolution_x"]
         convolved_y = gene["Enhancer_convolution_y"]
@@ -149,7 +149,7 @@ def export_plateaus(gene_data):
             f.write("Chromosome Start	End	Gene_name")
             f.write("\n")
 
-    for index, gene in gene_data.head(di.ENHANCER_CONVOLUTION).iterrows():
+    for index, gene in gene_data.head(di.CONVOLUTION_LIMIT).iterrows():
         
         plateau_regions = pd.DataFrame({"Start" : gene_data.loc[index, "Plateau_starts"], "End" : gene_data.loc[index, "Plateau_ends"]})
         plateau_regions["Gene_name"] = gene["Gene_name"]

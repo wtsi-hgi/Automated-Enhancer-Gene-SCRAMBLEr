@@ -8,7 +8,11 @@ import sys
 import data_initialisation as di
 import region_convolutions as rc
 import data_visualisation as dv
-    
+
+global INTERESTING_FEATURES
+
+INTERESTING_FEATURES = ["Std", "Anomalous_score", "Enhancer_count", "Enhancer_proportion", "Specific_gene_expression", "Gene_size"]
+
 def find_mean(expression_data):
     
     #Adds the mean of gene expression to the given expression data frame, giving
@@ -152,52 +156,40 @@ def find_nearby_enhancer_densities(gene_data, overlaps):
     gene_data = pd.merge(gene_data, overlaps, on = "Gene_name")
 
     return gene_data
-    
-def apply_hard_filters(gene_data):
-    
-    if di.STD_MAX is not False: gene_data = gene_data.drop(gene_data[gene_data["Std"] > di.STD_MAX].index)
-    if di.STD_MIN is not False: gene_data = gene_data.drop(gene_data[gene_data["Std"] < di.STD_MIN].index)
-    if di.ANOMALOUS_EXPRESSION_MAX is not False: gene_data = gene_data.drop(gene_data[gene_data["Anomalous_score"] > di.ANOMALOUS_EXPRESSION_MAX].index)
-    if di.ANOMALOUS_EXPRESSION_MIN is not False: gene_data = gene_data.drop(gene_data[gene_data["Anomalous_score"] < di.ANOMALOUS_EXPRESSION_MIN].index)
-    if di.ENHANCER_COUNT_MAX is not False: gene_data = gene_data.drop(gene_data[gene_data["Enhancer_count"] > di.ENHANCER_COUNT_MAX].index)
-    if di.ENHANCER_COUNT_MIN is not False: gene_data = gene_data.drop(gene_data[gene_data["Enhancer_count"] < di.ENHANCER_COUNT_MIN].index)
-    if di.ENHANCER_PROPORTION_MAX is not False: gene_data = gene_data.drop(gene_data[gene_data["Enhancer_proportion"] > di.ENHANCER_PROPORTION_MAX].index)
-    if di.ENHANCER_PROPORTION_MIN is not False: gene_data = gene_data.drop(gene_data[gene_data["Enhancer_proportion"] < di.ENHANCER_PROPORTION_MIN].index)
-    if di.CELL_LINE_EXPRESSION_MAX is not False: gene_data = gene_data.drop(gene_data[gene_data["Specific_gene_expression"] > di.CELL_LINE_EXPRESSION_MAX].index)
-    if di.CELL_LINE_EXPRESSION_MIN is not False: gene_data = gene_data.drop(gene_data[gene_data["Specific_gene_expression"] < di.CELL_LINE_EXPRESSION_MIN].index)
-    if di.GENE_SIZE_MAX is not False: gene_data = gene_data.drop(gene_data[gene_data["Gene_size"] > di.GENE_SIZE_MAX].index)
-    if di.GENE_SIZE_MIN is not False: gene_data = gene_data.drop(gene_data[gene_data["Gene_size"] < di.GENE_SIZE_MIN].index) 
-    
-    return gene_data
-    
+
 def iterate_through_hard_filters(gene_data):
+    
+    #Calls apply_hard_filter for each feature's min and max filter
     
     print("Applying hard filters...")
     
-    features = ["Std", "Anomalous_score", "Enhancer_count", "Enhancer_proportion", "Specific_gene_expression", "Gene_size"]
     max_filters = [di.STD_MAX, di.ANOMALOUS_EXPRESSION_MAX, di.ENHANCER_COUNT_MAX, di.ENHANCER_PROPORTION_MAX, di.CELL_LINE_EXPRESSION_MAX, di.GENE_SIZE_MAX]
     min_filters = [di.STD_MIN, di.ANOMALOUS_EXPRESSION_MIN, di.ENHANCER_COUNT_MIN, di.ENHANCER_PROPORTION_MIN, di.CELL_LINE_EXPRESSION_MIN, di.GENE_SIZE_MIN]
     
-    for feature in features:
+    for feature in INTERESTING_FEATURES:
         
-        gene_data = apply_hard_filter(gene_data, max_filters[features.index(feature)], feature, "max")
-        gene_data = apply_hard_filter(gene_data, min_filters[features.index(feature)], feature, "min")
+        gene_data = apply_hard_filter(gene_data, max_filters[INTERESTING_FEATURES.index(feature)], feature, "max")
+        gene_data = apply_hard_filter(gene_data, min_filters[INTERESTING_FEATURES.index(feature)], feature, "min")
     
     return gene_data
 
 def apply_hard_filter(gene_data, filter, feature, minmax):
-    
+
+    #Drops data above max filter or below min filter
+
     if minmax == "max":
         
         if filter is not False: gene_data = gene_data.drop(gene_data[gene_data[feature] > filter].index)
         
-    else:
+    elif minmax == "min":
         
         if filter is not False: gene_data = gene_data.drop(gene_data[gene_data[feature] < filter].index)
     
+    else: print("ERROR : Could not identify minmax.")
+    
     return gene_data
     
-def calculate_interest_score(genes):
+def calculate_interest_score(gene_data):
     
     #Various attributes of each gene are scaled and normallised, before being
     #weighted and combined into an interest score. The export_gene_scores_report
@@ -206,11 +198,11 @@ def calculate_interest_score(genes):
     print("Scoring genes...")
     
     scaler = StandardScaler()
-    scaled_genes = genes.loc[:, ["Gene_name", "Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size"]]
-    scaler.fit(scaled_genes.loc[:, ["Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size"]])
-    scaled_genes.loc[:, ["Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size"]] = scaler.transform(scaled_genes[["Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size"]])
+    scaled_genes = gene_data.loc[:, (["Gene_name"] + INTERESTING_FEATURES)]
+    scaler.fit(scaled_genes.loc[:, INTERESTING_FEATURES])
+    scaled_genes.loc[:, INTERESTING_FEATURES] = scaler.transform(scaled_genes[INTERESTING_FEATURES])
     
-    dv.compare_metrics(scaled_genes, "Comparison of Metrics within Z-space", "metrics_comparison_zspace_keep_inf_log2")
+    dv.compare_metrics(scaled_genes, "Comparison of Metrics within Z-space", "metrics_comparison")
     
     scaled_genes["Interest_score"] = 0
     scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Std"] * di.STD_WEIGHT)
@@ -221,15 +213,15 @@ def calculate_interest_score(genes):
     scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (di.GENE_SIZE_WEIGHT / (scaled_genes.loc[:, "Gene_size"] + di.GENE_SIZE_WEIGHT))  
     scaled_genes = scaled_genes.sort_values("Interest_score", ascending = False)
     
-    genes = pd.merge(genes, scaled_genes.loc[:, ["Gene_name", "Interest_score"]], on = "Gene_name")
-    genes = genes.sort_values("Interest_score", ascending = False).reset_index()
+    gene_data = pd.merge(gene_data, scaled_genes.loc[:, ["Gene_name", "Interest_score"]], on = "Gene_name")
+    gene_data = gene_data.sort_values("Interest_score", ascending = False).reset_index()
     
     
-    genes.loc[:, ["Gene_name", "Std", "Anomalous_score", "Specific_gene_expression", "Enhancer_count", "Enhancer_proportion", "Gene_size", "Interest_score"]].to_csv(di.RESULTS_DIRECTORY + "gene_scores.tsv", sep = "\t", index = True)
+    gene_data.loc[:, (["Gene_name"] + INTERESTING_FEATURES)].to_csv(di.RESULTS_DIRECTORY + "gene_scores.tsv", sep = "\t", index = True)
     
     export_gene_scores_report()
     
-    return genes
+    return gene_data
     
 def export_gene_scores_report():
     
@@ -241,17 +233,11 @@ def export_gene_scores_report():
     
     print("Exporting gene prioritisation report...")
     
-    hash_md5 = hashlib.md5()
-    
-    with open(sys.argv[1], "rb") as config:
-        
-        for chunk in iter(lambda: config.read(4096), b""):
-            
-            hash_md5.update(chunk)
+    checksum = generate_config_checksum()
             
     with open(sys.argv[1], "r") as config:
         
-        report_name = "gene_prioritisation_report_" + hash_md5.hexdigest() + ".txt"
+        report_name = "gene_prioritisation_report_" + checksum.hexdigest() + ".txt"
         report = open((di.GENE_PRIORITISATION_REPORT_DIRECTORY + report_name), "w")
         report.write(config.read() + "\n")
         
@@ -260,3 +246,15 @@ def export_gene_scores_report():
             report.write(scores.read())
             
         report.close()
+        
+def generate_config_checksum():
+
+    checksum = hashlib.md5()
+    
+    with open(sys.argv[1], "rb") as config:
+        
+        for chunk in iter(lambda: config.read(4096), b""):
+            
+            checksum.update(chunk)
+        
+    return checksum

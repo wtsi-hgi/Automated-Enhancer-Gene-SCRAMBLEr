@@ -64,7 +64,7 @@ def read_config_file():
     global CELL_LINE_SPECIFIC_EXPRESSION_THRESHOLD
     global INTERFERRING_GENE_OVERLAPS
     
-    global ENHANCER_CONVOLUTION
+    global CONVOLUTION_LIMIT
     global ENHANCER_CONVOLUTION_WEIGHT
     global QUIESCENT_CONVOLUTION_WEIGHT
     global PLATEAU_THRESHOLD
@@ -127,7 +127,7 @@ def read_config_file():
         CELL_LINE_SPECIFIC_EXPRESSION_THRESHOLD = settings["cell_line_specific_expression_threshold"]
         INTERFERRING_GENE_OVERLAPS = settings["interferring_gene_overlaps"]
 
-        ENHANCER_CONVOLUTION = settings["enhancer_convolution"]
+        CONVOLUTION_LIMIT = settings["convolution_limit"]
         ENHANCER_CONVOLUTION_WEIGHT = settings["enhancer_convolution_weight"]
         QUIESCENT_CONVOLUTION_WEIGHT = settings["quiescent_convolution_weight"]
         PLATEAU_THRESHOLD = settings["plateau_threshold"]
