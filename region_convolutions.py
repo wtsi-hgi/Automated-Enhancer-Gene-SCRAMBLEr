@@ -31,7 +31,10 @@ def define_step_function_of_element_overlaps_within_search_window(gene_data, ove
             
             single_step_x = np.where(np.logical_and(overlap["Start"] <= step_function_x, step_function_x <= overlap["End"]), 1, 0)
             step_function_y = np.where(single_step_x == 1, 1, step_function_y)
-            
+        
+        gene_step_x = np.where(np.logical_and(gene["Gene_start"] <= step_function_x, step_function_x <= gene["Gene_end"]), 1, 0)
+        step_function_y = np.where(gene_step_x == 1, 1, step_function_y)
+        
         gene_data.at[index, (element_type + "_step_function_x")]  = step_function_x
         gene_data.at[index, (element_type + "_step_function_y")] = step_function_y
         
@@ -75,9 +78,18 @@ def get_kernel(kernel_shape, size, sigma):
         kernel = gaussian_filter1d(kernel, sigma)
         
     else:
+        
         raise Exception("Kernel shape is neither Flat nor Guassian")
         
     return kernel
+
+def trim_convolutions(gene_data, element_type):
+    
+    #Removes parts of convolution that overlap the edges of the step function, horizontally
+    
+    print("Trimming convolutions...")
+    
+    
 
 def combine_convolutions(enhancer_convolution, quiescent_convolution):
     

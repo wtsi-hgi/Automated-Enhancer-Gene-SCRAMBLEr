@@ -1,7 +1,6 @@
 import pandas as pd
 import pyranges as pr
 from sklearn.preprocessing import StandardScaler
-from sklearn.compose import ColumnTransformer
 import hashlib
 import sys
 
@@ -69,10 +68,10 @@ def find_interferring_genes(gene_data):
     gene_data["Start"] = gene_data["Gene_start"]
     gene_data["End"] = gene_data["Gene_end"]
     
-    interferring_genes_pr = pr.PyRanges(gene_data.loc[gene_data["Specific_gene_expression"] > di.CELL_LINE_SPECIFIC_EXPRESSION_THRESHOLD])
-    genes_pr = pr.PyRanges(gene_data)
-    genes_nearest_upstream_pr = genes_pr.nearest(interferring_genes_pr, how = "upstream", suffix = "_upstream_interferring_gene", overlap = di.INTERFERRING_GENE_OVERLAPS)
-    genes_nearest_downstream_pr = genes_pr.nearest(interferring_genes_pr, how = "downstream", suffix = "_downstream_interferring_gene", overlap = di.INTERFERRING_GENE_OVERLAPS)
+    interferring_genes_search = pr.PyRanges(gene_data.loc[gene_data["Specific_gene_expression"] > di.CELL_LINE_SPECIFIC_EXPRESSION_THRESHOLD])
+    gene_search = pr.PyRanges(gene_data)
+    genes_nearest_upstream_pr = gene_search.nearest(interferring_genes_search, how = "upstream", suffix = "_upstream_interferring_gene", overlap = di.INTERFERRING_GENE_OVERLAPS)
+    genes_nearest_downstream_pr = gene_search.nearest(interferring_genes_search, how = "downstream", suffix = "_downstream_interferring_gene", overlap = di.INTERFERRING_GENE_OVERLAPS)
 
     genes_nearest_upstream = genes_nearest_upstream_pr.df
     genes_nearest_downstream = genes_nearest_downstream_pr.df
@@ -80,7 +79,7 @@ def find_interferring_genes(gene_data):
     gene_data = pd.merge(gene_data, genes_nearest_upstream.loc[:, ["Gene_name", "Start_upstream_interferring_gene", "End_upstream_interferring_gene", "Gene_name_upstream_interferring_gene"]], on = "Gene_name", how = "inner")
     gene_data = pd.merge(gene_data, genes_nearest_downstream.loc[:, ["Gene_name", "Start_downstream_interferring_gene", "End_downstream_interferring_gene", "Gene_name_downstream_interferring_gene"]], on = "Gene_name", how = "inner")
     
-    if di.INTERFERRING_GENE_OVERLAPS == False:
+    if not di.INTERFERRING_GENE_OVERLAPS:
         
         gene_data = gene_data.loc[gene_data["End_upstream_interferring_gene"] < gene_data["Gene_start"]]
         gene_data = gene_data.loc[gene_data["Start_downstream_interferring_gene"] > gene_data["Gene_end"]]
@@ -124,9 +123,9 @@ def find_element_overlaps_within_search_window(elements, genes):
     genes["Start"] = genes["Search_window_start"]
     genes["End"] = genes["Search_window_end"]
     
-    search_pr = pr.PyRanges(genes)
-    elements_pr = pr.PyRanges(elements)
-    overlaps = search_pr.intersect(elements_pr, strandedness = False)
+    gene_search = pr.PyRanges(genes)
+    elements_search = pr.PyRanges(elements)
+    overlaps = gene_search.intersect(elements_search, strandedness = False)
     overlaps = overlaps.df
     
     genes.drop(["Start", "End"], axis = 1)
@@ -155,6 +154,41 @@ def find_nearby_enhancer_densities(gene_data, overlaps):
     overlaps = overlaps.loc[:, ["Gene_name", "Enhancer_proportion"]].groupby(["Gene_name"], as_index = False)["Enhancer_proportion"].sum().reset_index()
     gene_data = pd.merge(gene_data, overlaps, on = "Gene_name")
 
+    return gene_data
+    
+def calculate_interest_score(gene_data):
+    
+    #Various attributes of each gene are scaled and normallised, before being
+    #weighted and combined into an interest score. The export_gene_scores_report
+    #function is called
+    
+    print("Scoring genes...")
+    
+    scaler = StandardScaler()
+    scaled_genes = gene_data.loc[:, (["Gene_name"] + INTERESTING_FEATURES)]
+    scaler.fit(scaled_genes.loc[:, INTERESTING_FEATURES])
+    scaled_genes.loc[:, INTERESTING_FEATURES] = scaler.transform(scaled_genes[INTERESTING_FEATURES])
+    
+    dv.compare_metrics(scaled_genes, "Comparison of Metrics within Z-space", "metrics_comparison")
+    
+    scaled_genes["Interest_score"] = 0
+    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Std"] * di.STD_WEIGHT)
+    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Anomalous_score"] * di.ANOMALOUS_EXPRESSION_WEIGHT)
+    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Enhancer_count"] * di.ENHANCER_COUNT_WEIGHT)
+    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Enhancer_proportion"] * di.ENHANCER_PROPORTION_WEIGHT)
+    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Specific_gene_expression"] * di.CELL_LINE_EXPRESSION_WEIGHT)
+    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (di.GENE_SIZE_WEIGHT / (scaled_genes.loc[:, "Gene_size"] + di.GENE_SIZE_WEIGHT))  
+    scaled_genes = scaled_genes.sort_values("Interest_score", ascending = False)
+    
+    gene_data = pd.merge(gene_data, scaled_genes.loc[:, ["Gene_name", "Interest_score"]], on = "Gene_name")
+    gene_data = iterate_through_hard_filters(gene_data)
+    gene_data = gene_data.sort_values("Interest_score", ascending = False).reset_index()
+    
+    
+    gene_data.loc[:, (["Gene_name"] + ["Interest_score"] + INTERESTING_FEATURES)].to_csv(di.RESULTS_DIRECTORY + "gene_scores.tsv", sep = "\t", index = True)
+    
+    export_gene_scores_report()
+    
     return gene_data
 
 def iterate_through_hard_filters(gene_data):
@@ -188,41 +222,7 @@ def apply_hard_filter(gene_data, filter, feature, minmax):
     else: print("ERROR : Could not identify minmax.")
     
     return gene_data
-    
-def calculate_interest_score(gene_data):
-    
-    #Various attributes of each gene are scaled and normallised, before being
-    #weighted and combined into an interest score. The export_gene_scores_report
-    #function is called
-    
-    print("Scoring genes...")
-    
-    scaler = StandardScaler()
-    scaled_genes = gene_data.loc[:, (["Gene_name"] + INTERESTING_FEATURES)]
-    scaler.fit(scaled_genes.loc[:, INTERESTING_FEATURES])
-    scaled_genes.loc[:, INTERESTING_FEATURES] = scaler.transform(scaled_genes[INTERESTING_FEATURES])
-    
-    dv.compare_metrics(scaled_genes, "Comparison of Metrics within Z-space", "metrics_comparison")
-    
-    scaled_genes["Interest_score"] = 0
-    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Std"] * di.STD_WEIGHT)
-    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Anomalous_score"] * di.ANOMALOUS_EXPRESSION_WEIGHT)
-    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Enhancer_count"] * di.ENHANCER_COUNT_WEIGHT)
-    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Enhancer_proportion"] * di.ENHANCER_PROPORTION_WEIGHT)
-    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Specific_gene_expression"] * di.CELL_LINE_EXPRESSION_WEIGHT)
-    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (di.GENE_SIZE_WEIGHT / (scaled_genes.loc[:, "Gene_size"] + di.GENE_SIZE_WEIGHT))  
-    scaled_genes = scaled_genes.sort_values("Interest_score", ascending = False)
-    
-    gene_data = pd.merge(gene_data, scaled_genes.loc[:, ["Gene_name", "Interest_score"]], on = "Gene_name")
-    gene_data = gene_data.sort_values("Interest_score", ascending = False).reset_index()
-    
-    
-    gene_data.loc[:, (["Gene_name"] + INTERESTING_FEATURES)].to_csv(di.RESULTS_DIRECTORY + "gene_scores.tsv", sep = "\t", index = True)
-    
-    export_gene_scores_report()
-    
-    return gene_data
-    
+
 def export_gene_scores_report():
     
     #Idealy this will not read from file but from passed argument
