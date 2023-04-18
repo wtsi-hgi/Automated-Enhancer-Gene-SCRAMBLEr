@@ -4,6 +4,33 @@ from scipy.ndimage import gaussian_filter1d
 
 import data_initialisation as di
 
+# newFunction is a refactored example of a previous function. It defines two new
+# columns, to be used in an enhancer step function.
+def newFunction(gene_data, overlaps):
+    gene_data['Enhancer_step_function_x'] = gene_data.apply(step_function_mask, axis=1)
+    gene_data['Enhancer_step_function_y'] = gene_data.apply(step_function, args=(overlaps,), axis=1)
+    
+    return gene_data
+
+# step_function_mask returns an array which defines a step function mask between
+# a start and an end value, as defined by the row values in a dataframe.
+def step_function_mask(row):
+    return np.arange(row['Search_window_start'], row['Search_window_end'])
+
+# step_function does... needs filling in here.
+def step_function(row, overlaps):
+    step_function = np.zeros(len(row['Enhancer_step_function_x']))
+    overlapping_genes = overlaps.loc[overlaps["Gene_name"] == row["Gene_name"]]
+    
+    for i in range(len(overlapping_genes)):
+        start = overlapping_genes.at[overlapping_genes.index[i], 'Start']
+        stop = overlapping_genes.at[overlapping_genes.index[i], 'End']
+        
+        in_range = np.logical_and(row['Enhancer_step_function_x'] >= start, row['Enhancer_step_function_x'] <= stop)
+        step_function = np.logical_or(step_function, in_range)
+    
+    return step_function.astype(int) # converts from bool to int, i.e. [True, False] -> [1, 0]
+
 def define_step_function_of_element_overlaps_within_search_window(gene_data, overlaps, element_type):
     
     #X and Y coordinates are generated for step functions representing elements within search window
@@ -31,10 +58,7 @@ def define_step_function_of_element_overlaps_within_search_window(gene_data, ove
             
             single_step_x = np.where(np.logical_and(overlap["Start"] <= step_function_x, step_function_x <= overlap["End"]), 1, 0)
             step_function_y = np.where(single_step_x == 1, 1, step_function_y)
-        
-        gene_step_x = np.where(np.logical_and(gene["Gene_start"] <= step_function_x, step_function_x <= gene["Gene_end"]), 1, 0)
-        step_function_y = np.where(gene_step_x == 1, 1, step_function_y)
-        
+            
         gene_data.at[index, (element_type + "_step_function_x")]  = step_function_x
         gene_data.at[index, (element_type + "_step_function_y")] = step_function_y
         
@@ -78,18 +102,9 @@ def get_kernel(kernel_shape, size, sigma):
         kernel = gaussian_filter1d(kernel, sigma)
         
     else:
-        
         raise Exception("Kernel shape is neither Flat nor Guassian")
         
     return kernel
-
-def trim_convolutions(gene_data, element_type):
-    
-    #Removes parts of convolution that overlap the edges of the step function, horizontally
-    
-    print("Trimming convolutions...")
-    
-    
 
 def combine_convolutions(enhancer_convolution, quiescent_convolution):
     
