@@ -184,10 +184,7 @@ def calculate_interest_score(gene_data):
     gene_data = iterate_through_hard_filters(gene_data)
     gene_data = gene_data.sort_values("Interest_score", ascending = False).reset_index()
     
-    
-    gene_data.loc[:, (["Gene_name"] + ["Interest_score"] + INTERESTING_FEATURES)].to_csv(di.RESULTS_DIRECTORY + "gene_scores.tsv", sep = "\t", index = True)
-    
-    export_gene_scores_report()
+    export_gene_scores_report(gene_data)
     
     return gene_data
 
@@ -223,7 +220,7 @@ def apply_hard_filter(gene_data, filter, feature, minmax):
     
     return gene_data
 
-def export_gene_scores_report():
+def export_gene_scores_report(gene_data):
     
     #Idealy this will not read from file but from passed argument
     
@@ -234,17 +231,13 @@ def export_gene_scores_report():
     print("Exporting gene prioritisation report...")
     
     checksum = generate_config_checksum()
-            
+    
     with open(sys.argv[1], "r") as config:
         
         report_name = "gene_prioritisation_report_" + checksum.hexdigest() + ".txt"
         report = open((di.GENE_PRIORITISATION_REPORT_DIRECTORY + report_name), "w")
         report.write(config.read() + "\n")
-        
-        with open((di.RESULTS_DIRECTORY + "gene_scores.tsv"), "r") as scores:
-            
-            report.write(scores.read())
-            
+        gene_data.loc[:, (["Gene_name"] + ["Interest_score"] + INTERESTING_FEATURES)].to_csv((di.GENE_PRIORITISATION_REPORT_DIRECTORY + report_name), sep = "\t", index = True, mode = "a")
         report.close()
         
 def generate_config_checksum():
