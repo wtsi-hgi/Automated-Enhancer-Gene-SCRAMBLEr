@@ -154,7 +154,7 @@ def find_plateaus(gene_data):
         convolved_y = gene["Enhancer_convolution_y"]
         convolved_y = np.append(convolved_y, 0)
         boolean_below_threshold = convolved_y < di.PLATEAU_THRESHOLD
-        boolean_below_threshold = np.concatenate((boolean_below_threshold[:(gene["Gene_start"] - convolved_x[0])], np.full((gene["Gene_end"] -  gene["Gene_start"]), False), boolean_below_threshold[(gene["Gene_end"] - convolved_x[0]):]))
+        boolean_below_threshold = np.concatenate((boolean_below_threshold[:(int((gene["Gene_start"] - convolved_x[0])))], np.full((gene["Gene_end"] -  gene["Gene_start"]), False), boolean_below_threshold[((int(gene["Gene_end"] - convolved_x[0]))):]))
         boolean_below_threshold = (boolean_below_threshold[:-1] != boolean_below_threshold[1:])
         plateau_coordinates = convolved_x[boolean_below_threshold]
         plateau_coordinates = np.concatenate([[convolved_x[0]], plateau_coordinates, [convolved_x[-1]]])

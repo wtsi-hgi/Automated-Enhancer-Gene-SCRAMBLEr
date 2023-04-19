@@ -32,7 +32,8 @@ def main():
     gene_data = fm.find_nearby_enhancer_densities(gene_data, enhancer_overlaps)
     gene_data = fm.calculate_interest_score(gene_data)
     
-    gene_data = rc.define_step_function_of_element_overlaps_within_search_window(gene_data, enhancer_overlaps, "Enhancer")
+    #gene_data = rc.define_step_function_of_element_overlaps_within_search_window(gene_data, enhancer_overlaps, "Enhancer")
+    gene_data = rc.newFunction(gene_data, enhancer_overlaps)
     gene_data = rc.convolve_step_function_to_average_windowed_density(gene_data, "Enhancer")
     del enhancer_overlaps
     

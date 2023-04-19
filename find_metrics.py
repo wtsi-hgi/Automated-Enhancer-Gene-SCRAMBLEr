@@ -86,6 +86,8 @@ def find_interferring_genes(gene_data):
         
     gene_data.drop(["Start", "End"], axis = 1)
         
+    print(gene_data.dtypes)    
+    
     return gene_data
 
 def find_search_windows(genes):
@@ -237,6 +239,8 @@ def export_gene_scores_report(gene_data):
         report_name = "gene_prioritisation_report_" + checksum.hexdigest() + ".txt"
         report = open((di.GENE_PRIORITISATION_REPORT_DIRECTORY + report_name), "w")
         report.write(config.read() + "\n")
+        report.close()
+        report = open((di.GENE_PRIORITISATION_REPORT_DIRECTORY + report_name), "a")
         gene_data.loc[:, (["Gene_name"] + ["Interest_score"] + INTERESTING_FEATURES)].to_csv((di.GENE_PRIORITISATION_REPORT_DIRECTORY + report_name), sep = "\t", index = True, mode = "a")
         report.close()
         
