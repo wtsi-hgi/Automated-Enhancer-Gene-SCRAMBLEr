@@ -3,37 +3,50 @@ import pandas as pd
 from scipy.ndimage import gaussian_filter1d
 
 import data_initialisation as di
+import sequence_seeking as ss
 
-# newFunction is a refactored example of a previous function. It defines two new
-# columns, to be used in an enhancer step function.
-def newFunction(gene_data, overlaps):
-    gene_data['Enhancer_step_function_x'] = gene_data.apply(step_function_mask, axis=1)
-    gene_data['Enhancer_step_function_y'] = gene_data.apply(step_function, args=(overlaps,), axis=1)
+def generate_step_function_of_overlaps(gene_data, overlaps):
+    
+    # newFunction is a refactored example of a previous function. It defines two new
+    # columns, to be used in an enhancer step function.
+    
+    print("Generating step function of overlaps within search window...")
+    
+    gene_data['Enhancer_step_function_x'] = gene_data.apply(step_function_x, axis=1)
+    gene_data['Enhancer_step_function_y'] = gene_data.apply(step_function_y, args=(overlaps,), axis=1)
+    
+    gene_data = gene_data.sort_values("Interest_score", ascending = False).reset_index(drop = True)
     
     return gene_data
 
-# step_function_mask returns an array which defines a step function mask between
-# a start and an end value, as defined by the row values in a dataframe.
-def step_function_mask(row):
+def step_function_x(row):
+    
+    # step_function_mask returns an array of genome coordinates within
+    # the search window
+    
     return np.arange(row['Search_window_start'], row['Search_window_end'])
 
-# step_function does... needs filling in here.
-def step_function(row, overlaps):
-    step_function = np.zeros(len(row['Enhancer_step_function_x']))
-    overlapping_genes = overlaps.loc[overlaps["Gene_name"] == row["Gene_name"]]
+def step_function_y(row, overlaps):
     
-    for i in range(len(overlapping_genes)):
-        start = overlapping_genes.at[overlapping_genes.index[i], 'Start']
-        stop = overlapping_genes.at[overlapping_genes.index[i], 'End']
+    # Generates a mask for each overlap, and combines them into a step function for the
+    # search window
+    
+    step_function = np.zeros(len(row['Enhancer_step_function_x']), dtype = int)
+    overlapping_elements = overlaps.loc[overlaps["Gene_name"] == row["Gene_name"]]
+    
+    for i in range(len(overlapping_elements)):
+        
+        start = overlapping_elements.at[overlapping_elements.index[i], 'Start']
+        stop = overlapping_elements.at[overlapping_elements.index[i], 'End']
         
         in_range = np.logical_and(row['Enhancer_step_function_x'] >= start, row['Enhancer_step_function_x'] <= stop)
         step_function = np.logical_or(step_function, in_range)
     
-    return step_function.astype(int) # converts from bool to int, i.e. [True, False] -> [1, 0]
+    return step_function.astype(int)
 
 def define_step_function_of_element_overlaps_within_search_window(gene_data, overlaps, element_type):
     
-    #X and Y coordinates are generated for step functions representing elements within search window
+    # X and Y coordinates are generated for step functions representing elements within search window
     
     print("Generating step function for elements within search window...")
     
@@ -183,6 +196,7 @@ def export_plateaus(gene_data):
         plateau_regions["Chromosome"] = "chr" + gene["Chromosome"]
         plateau_regions["Strand"] = gene["Strand"]
         
-        #plateau_regions = ss.find_fasta(plateau_regions)
+        plateau_regions = ss.find_fasta(plateau_regions)
         
-        plateau_regions.to_csv((di.RESULTS_DIRECTORY + "plateaus.bed"), sep = "\t", index = False, columns = ["Chromosome", "Start", "End", "Gene_name"], mode = "a", header = False)
+        #plateau_regions.to_csv((di.RESULTS_DIRECTORY + "plateaus.bed"), sep = "\t", index = False, columns = ["Chromosome", "Start", "End", "Gene_name"], mode = "a", header = False)
+        plateau_regions.to_csv((di.RESULTS_DIRECTORY + "sequences.csv"), index = False, columns = ["Gene_name", "seq"], mode = "w", header = False)
