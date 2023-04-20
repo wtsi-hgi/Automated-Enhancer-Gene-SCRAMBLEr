@@ -43,39 +43,6 @@ def step_function_y(row, overlaps):
         step_function = np.logical_or(step_function, in_range)
     
     return step_function.astype(int)
-
-def define_step_function_of_element_overlaps_within_search_window(gene_data, overlaps, element_type):
-    
-    # X and Y coordinates are generated for step functions representing elements within search window
-    
-    print("Generating step function for elements within search window...")
-    
-    gene_data["Search_window_start"] = gene_data["Search_window_start"].astype("int")
-    gene_data["Search_window_end"] = gene_data["Search_window_end"].astype("int")
-
-    gene_data[(element_type + "_step_function_x")] = [np.empty(0, dtype = float)] * len(gene_data)
-    gene_data[(element_type + "_step_function_y")] = [np.empty(0, dtype = float)] * len(gene_data)
-
-    gene_data = gene_data.sort_values("Interest_score", ascending = False).reset_index(drop = True)
-
-    for index, gene in gene_data.head(di.CONVOLUTION_LIMIT).iterrows():
-        
-        print("Generating step function of " + element_type.lower() + "s for " + gene["Gene_name"] + " (" + str(index + 1) + " of " + str(di.CONVOLUTION_LIMIT) + ")...")
-
-        gene_specific_overlaps = overlaps.loc[overlaps["Gene_name"] == gene["Gene_name"]]
-        
-        step_function_x = np.arange(gene["Search_window_start"], gene["Search_window_end"])
-        step_function_y = np.zeros((gene["Search_window_end"] - gene["Search_window_start"]), dtype = int)
-        
-        for _, overlap in gene_specific_overlaps.iterrows():
-            
-            single_step_x = np.where(np.logical_and(overlap["Start"] <= step_function_x, step_function_x <= overlap["End"]), 1, 0)
-            step_function_y = np.where(single_step_x == 1, 1, step_function_y)
-            
-        gene_data.at[index, (element_type + "_step_function_x")]  = step_function_x
-        gene_data.at[index, (element_type + "_step_function_y")] = step_function_y
-        
-    return gene_data
     
 def convolve_step_function_to_average_windowed_density(gene_data, element_type):
 
