@@ -71,7 +71,7 @@ def read_config_file():
    
     try:
         
-        with open("config.json", "r") as config_file:
+        with open(sys.argv[1], "r") as config_file:
             settings = json.load(config_file)
 
         RESULTS_DIRECTORY = settings["results_directory"]

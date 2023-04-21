@@ -297,7 +297,7 @@ def export_gene_scores_report(gene_data):
     
     checksum = generate_config_checksum()
     
-    with open("config.json", "r") as config:
+    with open(sys.argv[1], "r") as config:
         
         report_name = "gene_prioritisation_report_" + checksum.hexdigest() + ".txt"
         report = open((di.GENE_PRIORITISATION_REPORT_DIRECTORY + report_name), "w")
@@ -312,7 +312,7 @@ def generate_config_checksum():
 
     checksum = hashlib.md5()
     
-    with open("config.json", "rb") as config:
+    with open(sys.argv[1], "rb") as config:
         for chunk in iter(lambda: config.read(4096), b""):
             checksum.update(chunk)
         
