@@ -7,13 +7,13 @@ import sequence_seeking as ss
 
 def generate_step_function_of_overlaps(gene_data, overlaps):
     
-    # newFunction is a refactored example of a previous function. It defines two new
-    # columns, to be used in an enhancer step function.
+    #   newFunction is a refactored example of a previous function. It defines two new
+    #   columns, to be used in an enhancer step function.
     
     print("Generating step function of overlaps within search window...")
     
-    gene_data['Enhancer_step_function_x'] = gene_data.apply(step_function_x, axis=1)
-    gene_data['Enhancer_step_function_y'] = gene_data.apply(step_function_y, args=(overlaps,), axis=1)
+    gene_data['Enhancer_step_function_x'] = gene_data.apply(step_function_x, axis = 1)
+    gene_data['Enhancer_step_function_y'] = gene_data.apply(step_function_y, args = (overlaps,), axis = 1)
     
     gene_data = gene_data.sort_values("Interest_score", ascending = False).reset_index(drop = True)
     
@@ -21,15 +21,15 @@ def generate_step_function_of_overlaps(gene_data, overlaps):
 
 def step_function_x(row):
     
-    # step_function_mask returns an array of genome coordinates within
-    # the search window
+    #   step_function_mask returns an array of genome coordinates within
+    #   the search window
     
     return np.arange(row['Search_window_start'], row['Search_window_end'])
 
 def step_function_y(row, overlaps):
     
-    # Generates a mask for each overlap, and combines them into a step function for the
-    # search window
+    #   Generates a mask for each overlap, and combines them into a step function for the
+    #   search window
     
     step_function = np.zeros(len(row['Enhancer_step_function_x']), dtype = int)
     overlapping_elements = overlaps.loc[overlaps["Gene_name"] == row["Gene_name"]]
@@ -46,7 +46,7 @@ def step_function_y(row, overlaps):
     
 def convolve_step_function_to_average_windowed_density(gene_data, element_type):
 
-    #X and Y coordinates are generated for convolution of element step function with chosen kernel
+    #   X and Y coordinates are generated for convolution of element step function with chosen kernel
 
     print("Converting step functions to convolved average windowed density signal...")
 
@@ -68,7 +68,7 @@ def convolve_step_function_to_average_windowed_density(gene_data, element_type):
 
 def get_kernel(kernel_shape, size, sigma):
     
-    #Kernel is generated as numpy array depending on desired shape and size
+    #   Kernel is generated as numpy array depending on desired shape and size
     
     if kernel_shape == "flat":
         
@@ -88,7 +88,7 @@ def get_kernel(kernel_shape, size, sigma):
 
 def combine_convolutions(enhancer_convolution, quiescent_convolution):
     
-    #Eventually will be used to add convolutions together
+    #   Eventually will be used to add convolutions together
     
     print("Merging convolutions...")
 
@@ -100,7 +100,7 @@ def combine_convolutions(enhancer_convolution, quiescent_convolution):
     
 def export_convolutions(gene_data):
     
-    #Coordinates of convolutions are exported to wig file, for each gene
+    #   Coordinates of convolutions are exported to wig file, for each gene
     
     print("Exporting enhancer density convolutions to wig file...")
     
@@ -116,9 +116,9 @@ def export_convolutions(gene_data):
     
 def find_plateaus(gene_data):
     
-    #find_plateaus takes convolved coordinates, and applies a threshold to
-    #separate the search window into regions based on the y-value of each
-    #convolved base.
+    #   find_plateaus takes convolved coordinates, and applies a threshold to
+    #   separate the search window into regions based on the y-value of each
+    #   convolved base.
     
     gene_data["Plateau_coordinates"] = ""
     gene_data["Plateau_starts"] = ""
@@ -148,7 +148,7 @@ def find_plateaus(gene_data):
     return gene_data
     
 def export_plateaus(gene_data):
-    #export_plateaus saves plateaus associated with each gene as a bed file
+    #   export_plateaus saves plateaus associated with each gene as a bed file
     
     print("Exporting plateaus to bed file...")
     
@@ -164,6 +164,7 @@ def export_plateaus(gene_data):
         plateau_regions["Strand"] = gene["Strand"]
         
         plateau_regions = ss.find_fasta(plateau_regions)
+        sequences_for_pridict = ss.find_insertion_prefixes_and_suffixes(plateau_regions)
         
         #plateau_regions.to_csv((di.RESULTS_DIRECTORY + "plateaus.bed"), sep = "\t", index = False, columns = ["Chromosome", "Start", "End", "Gene_name"], mode = "a", header = False)
-        plateau_regions.to_csv((di.RESULTS_DIRECTORY + "sequences.csv"), index = False, columns = ["Gene_name", "seq"], mode = "w", header = False)
+        sequences_for_pridict.to_csv((di.RESULTS_DIRECTORY + "sequences_for_pridict.csv"), index = False, columns = ["Sequence_name", "Sequence"], mode = "w", header = False)

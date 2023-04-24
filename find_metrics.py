@@ -84,9 +84,7 @@ def find_interferring_genes(gene_data):
         gene_data = gene_data.loc[gene_data["End_upstream_interferring_gene"] < gene_data["Gene_start"]]
         gene_data = gene_data.loc[gene_data["Start_downstream_interferring_gene"] > gene_data["Gene_end"]]
         
-    gene_data.drop(["Start", "End"], axis = 1)
-        
-    print(gene_data.dtypes)    
+    gene_data.drop(["Start", "End"], axis = 1) 
     
     return gene_data
 

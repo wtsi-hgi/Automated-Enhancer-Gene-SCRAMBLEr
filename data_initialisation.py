@@ -68,6 +68,8 @@ def read_config_file():
     global ENHANCER_CONVOLUTION_WEIGHT
     global QUIESCENT_CONVOLUTION_WEIGHT
     global PLATEAU_THRESHOLD
+    
+    global INSERTED_SEQUENCE
    
     try:
         
@@ -131,6 +133,8 @@ def read_config_file():
         ENHANCER_CONVOLUTION_WEIGHT = settings["enhancer_convolution_weight"]
         QUIESCENT_CONVOLUTION_WEIGHT = settings["quiescent_convolution_weight"]
         PLATEAU_THRESHOLD = settings["plateau_threshold"]
+        
+        INSERTED_SEQUENCE = settings["inserted_sequence"]
             
     except:
         
