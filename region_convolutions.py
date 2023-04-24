@@ -179,17 +179,17 @@ def export_plateaus(gene_data):
 
     for index, gene in gene_data.head(di.CONVOLUTION_LIMIT).iterrows():
         
-        plateau_regions = pd.DataFrame(
+        plateaus = pd.DataFrame(
             {"Start" : gene_data.loc[index, "Plateau_starts"], 
              "End" : gene_data.loc[index, "Plateau_ends"]
             }
         )
-        plateau_regions["Gene_name"] = gene["Gene_name"]
-        plateau_regions["Chromosome"] = "chr" + gene["Chromosome"]
-        plateau_regions["Strand"] = gene["Strand"]
+        plateaus["Gene_name"] = gene["Gene_name"]
+        plateaus["Chromosome"] = "chr" + gene["Chromosome"]
+        plateaus["Strand"] = gene["Strand"]
         
-        plateau_regions = ss.find_fasta(plateau_regions)
-        sequences_for_pridict = ss.find_insertion_prefixes_and_suffixes(plateau_regions)
+        plateaus = ss.find_fasta(plateaus)
+        sequences_for_pridict = ss.find_insertion_prefixes_and_suffixes(plateaus)
         
         #plateau_regions.to_csv((di.RESULTS_DIRECTORY + "plateaus.bed"), sep = "\t", index = False, columns = ["Chromosome", "Start", "End", "Gene_name"], mode = "a", header = False)
         sequences_for_pridict.to_csv((di.RESULTS_DIRECTORY + "sequences_for_pridict.csv"), index = False, columns = ["Sequence_name", "Sequence"], mode = "w", header = False)

@@ -3,22 +3,22 @@ import pandas as pd
 
 import data_initialisation as di
 
-def find_fasta(plateau_regions):
+def find_fasta(plateaus):
     
     #find_fasta takes coordinates of plateaus and returns FASTA sequence from reference genome
     
     print("Finding FASTA sequences from intervals...")
     
-    plateau_regions_pr = pr.PyRanges(plateau_regions)
+    plateaus_pr = pr.PyRanges(plateaus)
     
-    seq = pr.get_sequence(plateau_regions_pr, di.REFERENCE_GENOME)
-    plateau_regions_pr.seq = seq
-    plateau_regions = plateau_regions_pr.df
-    plateau_regions = plateau_regions.rename(columns = {"seq" : "Sequence"})
+    seq = pr.get_sequence(plateaus_pr, di.REFERENCE_GENOME)
+    plateaus_pr.seq = seq
+    plateaus = plateaus_pr.df
+    plateaus = plateaus.rename(columns = {"seq" : "Sequence"})
     
-    return plateau_regions
+    return plateaus
     
-def find_insertion_prefixes_and_suffixes(plateau_regions):
+def find_insertion_prefixes_and_suffixes(plateaus):
 
     #Within sequences of regions, finds prefixes and suffixes of sequence that is to be inserted
 
@@ -26,7 +26,9 @@ def find_insertion_prefixes_and_suffixes(plateau_regions):
 
     sequences_for_pridict = pd.DataFrame(columns = ["Sequence_name", "Sequence"])
 
-    for _, plateau in plateau_regions.iterrows():
+    #plateaus = 
+
+    for _, plateau in plateaus.iterrows():
 
         for amount_unfound in range(1, len(di.INSERTED_SEQUENCE)):
             
