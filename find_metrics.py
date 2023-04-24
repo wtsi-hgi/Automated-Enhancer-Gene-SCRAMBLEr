@@ -217,14 +217,16 @@ def calculate_interest_score(gene_data):
     
     dv.compare_metrics(scaled_genes, "Comparison of Metrics within Z-space", "metrics_comparison")
     
-    scaled_genes["Interest_score"] = 0
-    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Std"] * di.STD_WEIGHT)
-    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Anomalous_score"] * di.ANOMALOUS_EXPRESSION_WEIGHT)
-    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Enhancer_count"] * di.ENHANCER_COUNT_WEIGHT)
-    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Enhancer_proportion"] * di.ENHANCER_PROPORTION_WEIGHT)
-    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (scaled_genes.loc[:, "Specific_gene_expression"] * di.CELL_LINE_EXPRESSION_WEIGHT)
-    scaled_genes.loc[:, "Interest_score"] = scaled_genes.loc[:, "Interest_score"] + (di.GENE_SIZE_WEIGHT / (scaled_genes.loc[:, "Gene_size"] + di.GENE_SIZE_WEIGHT))  
-    scaled_genes = scaled_genes.sort_values("Interest_score", ascending = False)
+    scaled_genes = scaled_genes.assign(
+        Interest_score = (
+            scaled_genes["Std"] * di.STD_WEIGHT +
+            scaled_genes["Anomalous_score"] * di.ANOMALOUS_EXPRESSION_WEIGHT +
+            scaled_genes["Enhancer_count"] * di.ENHANCER_COUNT_WEIGHT +
+            scaled_genes["Enhancer_proportion"] * di.ENHANCER_PROPORTION_WEIGHT +
+            scaled_genes["Specific_gene_expression"] * di.CELL_LINE_EXPRESSION_WEIGHT +
+            di.GENE_SIZE_WEIGHT / (scaled_genes["Gene_size"] + di.GENE_SIZE_WEIGHT)
+        )
+    ).sort_values("Interest_score", ascending=False)
     
     gene_data = pd.merge(gene_data, scaled_genes.loc[:, ["Gene_name", "Interest_score"]], on = "Gene_name")
     gene_data = iterate_through_hard_filters(gene_data)
