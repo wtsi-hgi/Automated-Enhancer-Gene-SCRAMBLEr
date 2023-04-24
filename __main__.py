@@ -5,6 +5,8 @@ import find_metrics as fm
 import region_convolutions as rc
 import data_visualisation as dv
 
+merge_on_column = "Gene_name"
+element_type = "Enhancer"
 
 def main():
     
@@ -22,18 +24,18 @@ def main():
     gene_data = fm.find_search_windows(gene_data)
     
     regulatory_elements = di.read_regulatory_elements()
-    enhancers = di.clean_regulatory_elements(regulatory_elements, "enhancer")
+    enhancers = di.clean_regulatory_elements(regulatory_elements, element_type)
     del regulatory_elements
     
     enhancer_overlaps = fm.find_element_overlaps_within_search_window(enhancers, gene_data)
     del enhancers
     
-    gene_data = fm.count_overlaps_per_gene(gene_data, enhancer_overlaps, "Enhancer")
+    gene_data = fm.count_overlaps_per_gene(gene_data, enhancer_overlaps, element_type)
     gene_data = fm.find_nearby_enhancer_densities(gene_data, enhancer_overlaps)
     gene_data = fm.calculate_interest_score(gene_data)
     
     gene_data = rc.generate_step_function_of_overlaps(gene_data, enhancer_overlaps)
-    gene_data = rc.convolve_step_function_to_average_windowed_density(gene_data, "Enhancer")
+    gene_data = rc.convolve_step_function_to_average_windowed_density(gene_data, element_type)
     del enhancer_overlaps
     
     gene_data = rc.find_plateaus(gene_data)

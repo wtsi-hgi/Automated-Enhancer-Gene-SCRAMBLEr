@@ -74,7 +74,6 @@ def read_config_file():
     try:
         
         with open(sys.argv[1], "r") as config_file:
-
             settings = json.load(config_file)
 
         RESULTS_DIRECTORY = settings["results_directory"]
@@ -137,7 +136,6 @@ def read_config_file():
         INSERTED_SEQUENCE = settings["inserted_sequence"]
             
     except:
-        
         print("ERROR: Config file could not be read.")
         
 def read_gene_annotations():
@@ -270,11 +268,11 @@ def clean_regulatory_elements(regulatory_elements, element_type):
     
     print("Cleaning " + element_type + " elements data...")
     
-    if element_type == "enhancer":
+    if element_type == "Enhancer":
         
         flags_of_interest = ENHANCER_EPIGENETIC_FLAGS_OF_INTEREST
         
-    elif element_type == "quiescent":
+    elif element_type == "Quiescent":
     
         flags_of_interest = QUIESCENT_EPIGENETIC_FLAGS_OF_INTEREST
         
