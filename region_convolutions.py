@@ -189,7 +189,9 @@ def export_plateaus(gene_data):
         plateaus["Strand"] = gene["Strand"]
         
         plateaus = ss.find_fasta(plateaus)
-        sequences_for_pridict = ss.find_insertion_prefixes_and_suffixes(plateaus)
+        sequences_for_pridict = ss.iterate_prefix_suffix_search(plateaus)
+        
+        print(sequences_for_pridict)
         
         #plateau_regions.to_csv((di.RESULTS_DIRECTORY + "plateaus.bed"), sep = "\t", index = False, columns = ["Chromosome", "Start", "End", "Gene_name"], mode = "a", header = False)
-        sequences_for_pridict.to_csv((di.RESULTS_DIRECTORY + "sequences_for_pridict.csv"), index = False, columns = ["Sequence_name", "Sequence"], mode = "w", header = False)
+        #sequences_for_pridict.to_csv((di.RESULTS_DIRECTORY + "sequences_for_pridict.csv"), index = False, columns = ["Sequence_name", "Sequence"], mode = "w", header = False)

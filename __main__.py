@@ -33,6 +33,7 @@ def main():
     gene_data = fm.count_overlaps_per_gene(gene_data, enhancer_overlaps, element_type)
     gene_data = fm.find_nearby_enhancer_densities(gene_data, enhancer_overlaps)
     gene_data = fm.calculate_interest_score(gene_data)
+    fm.export_gene_scores_report(gene_data)
     
     gene_data = rc.generate_step_function_of_overlaps(gene_data, enhancer_overlaps)
     gene_data = rc.convolve_step_function_to_average_windowed_density(gene_data, element_type)

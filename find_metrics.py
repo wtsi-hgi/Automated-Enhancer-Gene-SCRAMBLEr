@@ -8,9 +8,7 @@ import data_initialisation as di
 import region_convolutions as rc
 import data_visualisation as dv
 
-global INTERESTING_FEATURES
-
-INTERESTING_FEATURES = ["Std", "Anomalous_score", "Enhancer_count", "Enhancer_proportion", "Specific_gene_expression", "Gene_size"]
+interesting_features = ["Std", "Anomalous_score", "Enhancer_count", "Enhancer_proportion", "Specific_gene_expression", "Gene_size"]
 
 def find_mean(expression_data):
     
@@ -211,9 +209,9 @@ def calculate_interest_score(gene_data):
     print("Scoring genes...")
     
     scaler = StandardScaler()
-    scaled_genes = gene_data.loc[:, (["Gene_name"] + INTERESTING_FEATURES)]
-    scaler.fit(scaled_genes.loc[:, INTERESTING_FEATURES])
-    scaled_genes.loc[:, INTERESTING_FEATURES] = scaler.transform(scaled_genes[INTERESTING_FEATURES])
+    scaled_genes = gene_data.loc[:, (["Gene_name"] + interesting_features)]
+    scaler.fit(scaled_genes.loc[:, interesting_features])
+    scaled_genes.loc[:, interesting_features] = scaler.transform(scaled_genes[interesting_features])
     
     dv.compare_metrics(scaled_genes, "Comparison of Metrics within Z-space", "metrics_comparison")
     
@@ -231,8 +229,6 @@ def calculate_interest_score(gene_data):
     gene_data = pd.merge(gene_data, scaled_genes.loc[:, ["Gene_name", "Interest_score"]], on = "Gene_name")
     gene_data = iterate_through_hard_filters(gene_data)
     gene_data = gene_data.sort_values("Interest_score", ascending = False).reset_index()
-    
-    export_gene_scores_report(gene_data)
     
     return gene_data
 
@@ -256,14 +252,14 @@ def iterate_through_hard_filters(gene_data):
                    di.CELL_LINE_EXPRESSION_MIN, 
                    di.GENE_SIZE_MIN]
     
-    for feature in INTERESTING_FEATURES:
+    for feature in interesting_features:
         
         gene_data = apply_hard_filter(gene_data, 
-                                      max_filters[INTERESTING_FEATURES.index(feature)], 
+                                      max_filters[interesting_features.index(feature)], 
                                       feature, "max")
         
         gene_data = apply_hard_filter(gene_data, 
-                                      min_filters[INTERESTING_FEATURES.index(feature)], 
+                                      min_filters[interesting_features.index(feature)], 
                                       feature, "min")
     
     return gene_data
@@ -304,7 +300,7 @@ def export_gene_scores_report(gene_data):
         report.write(config.read() + "\n")
         report.close()
         report = open((di.GENE_PRIORITISATION_REPORT_DIRECTORY + report_name), "a")
-        gene_data.loc[:, (["Gene_name"] + ["Interest_score"] + INTERESTING_FEATURES)].to_csv(
+        gene_data.loc[:, (["Gene_name"] + ["Interest_score"] + interesting_features)].to_csv(
             (di.GENE_PRIORITISATION_REPORT_DIRECTORY + report_name), sep = "\t", index = True, mode = "a")
         report.close()
         
