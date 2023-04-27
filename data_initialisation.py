@@ -2,8 +2,13 @@ import sys
 import json
 import re
 import pandas as pd
+import numpy as np
 
 import find_metrics as fm
+
+element_type = "Enhancer"
+geneNameRegex = "gene_name \"(.*?)\""
+geneBiotypeRegex = "gene_biotype \"(.*?)\""
 
 def read_config_file():
     
@@ -68,11 +73,12 @@ def read_config_file():
     global ENHANCER_CONVOLUTION_WEIGHT
     global QUIESCENT_CONVOLUTION_WEIGHT
     global PLATEAU_THRESHOLD
+    
+    global INSERTED_SEQUENCE
    
     try:
         
         with open(sys.argv[1], "r") as config_file:
-
             settings = json.load(config_file)
 
         RESULTS_DIRECTORY = settings["results_directory"]
@@ -131,9 +137,10 @@ def read_config_file():
         ENHANCER_CONVOLUTION_WEIGHT = settings["enhancer_convolution_weight"]
         QUIESCENT_CONVOLUTION_WEIGHT = settings["quiescent_convolution_weight"]
         PLATEAU_THRESHOLD = settings["plateau_threshold"]
+        
+        INSERTED_SEQUENCE = settings["inserted_sequence"]
             
     except:
-        
         print("ERROR: Config file could not be read.")
         
 def read_gene_annotations():
@@ -166,11 +173,12 @@ def clean_genes(gene_annotations):
     
     print("Cleaning gene data...")
     
-    gene_annotations = gene_annotations.loc[gene_annotations["Chromosome"].isin(CHROMOSOMES_OF_INTEREST)]
-    gene_annotations = gene_annotations.drop(gene_annotations[gene_annotations["Type"] != "gene"].index)
-    gene_annotations["Gene_biotype"] = gene_annotations["Attributes"].apply(lambda x : re.findall("gene_biotype \"(.*?)\"", x)[0] if re.search("gene_name \"(.*?)\"", x) != None else "None")
-    gene_annotations = gene_annotations.drop(gene_annotations[gene_annotations["Gene_biotype"] != "protein_coding"].index)
-    gene_annotations["Gene_name"] = gene_annotations["Attributes"].apply(lambda x : re.findall("gene_name \"(.*?)\"", x)[0] if re.search("gene_name \"(.*?)\"", x) != None else "None")
+    gene_annotations = gene_annotations.query('Chromosome in @CHROMOSOMES_OF_INTEREST')
+    gene_annotations = gene_annotations[gene_annotations["Type"] == "gene"]
+    gene_annotations["Gene_biotype"] = gene_annotations["Attributes"].apply(lambda x : re.findall(geneBiotypeRegex, x)[0] if re.search(geneNameRegex, x) != None else "None")
+    gene_annotations = gene_annotations[gene_annotations["Gene_biotype"] == "protein_coding"]
+    gene_annotations["Gene_name"] = gene_annotations["Attributes"].apply(lambda x : re.findall(geneNameRegex, x)[0] if re.search(geneNameRegex, x) != None else "None")
+ 
     gene_annotations = gene_annotations.drop(["Source", "Type", "Score", "Phase", "Attributes", "Gene_biotype"], axis = 1)
     gene_annotations = gene_annotations.drop_duplicates(keep = False, subset = ["Gene_name"])
     gene_annotations = gene_annotations.rename(columns = {"Start" : "Gene_start", "End" : "Gene_end"})
@@ -239,7 +247,11 @@ def clean_specific_expression_data(specific_expression_data):
     
     print("Cleaning specific expression data...")
     
-    specific_expression_data["Specific_gene_expression"] = specific_expression_data["Specific_gene_expression"].apply(lambda expression : 0 if expression == "-Inf" else pow(2, expression))
+    specific_expression_data["Specific_gene_expression"] = np.where(
+        specific_expression_data["Specific_gene_expression"] == "-Inf",
+        0,
+        np.power(2, specific_expression_data["Specific_gene_expression"])
+    )
     specific_expression_data = specific_expression_data.drop_duplicates(keep = False, subset = ["Gene_name"])
     
     return specific_expression_data     
@@ -254,7 +266,7 @@ def read_regulatory_elements():
         regulatory_elements = pd.read_csv(REGULATORY_ELEMENTS_ANNOTATION_REFERENCE_PATH, sep = "\t",
                                               names = ["Chromosome", "Start", "End", "Flag"])
         
-        return regulatory_elements    
+        return clean_regulatory_elements(regulatory_elements, element_type)
     
     except:
         print("ERROR: Could not read regulatory elements file.")
@@ -266,17 +278,17 @@ def clean_regulatory_elements(regulatory_elements, element_type):
     
     print("Cleaning " + element_type + " elements data...")
     
-    if element_type == "enhancer":
+    if element_type == "Enhancer":
         
         flags_of_interest = ENHANCER_EPIGENETIC_FLAGS_OF_INTEREST
         
-    elif element_type == "quiescent":
+    elif element_type == "Quiescent":
     
         flags_of_interest = QUIESCENT_EPIGENETIC_FLAGS_OF_INTEREST
         
     else: print("ERROR : Unrecognised regulatory element type.")
         
-    regulatory_elements["Chromosome"] = regulatory_elements["Chromosome"].apply(lambda x : x[3:])
+    regulatory_elements["Chromosome"] = regulatory_elements["Chromosome"].str[3:]
     
     regulatory_elements = regulatory_elements[regulatory_elements["Flag"].isin(flags_of_interest)]
     regulatory_elements = regulatory_elements.drop(["Flag"], axis = 1)
