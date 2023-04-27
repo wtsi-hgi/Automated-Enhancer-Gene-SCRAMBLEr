@@ -3,6 +3,7 @@ import pyranges as pr
 from sklearn.preprocessing import StandardScaler
 import hashlib
 import sys
+from scipy import stats
 
 import data_initialisation as di
 import region_convolutions as rc
@@ -210,8 +211,13 @@ def calculate_interest_score(gene_data):
     
     scaler = StandardScaler()
     scaled_genes = gene_data.loc[:, (["Gene_name"] + interesting_features)]
-    scaler.fit(scaled_genes.loc[:, interesting_features])
-    scaled_genes.loc[:, interesting_features] = scaler.transform(scaled_genes[interesting_features])
+    scaled_genes.loc[:, interesting_features] = scaler.fit_transform(scaled_genes.loc[:, interesting_features])
+    #scaled_genes.loc[:, interesting_features] = scaler.fit(scaled_genes.loc[:, interesting_features])
+    #scaled_genes.loc[:, interesting_features] = scaler.transform(scaled_genes.loc[:, interesting_features])
+    
+       for feature in interesting_features:
+        
+        gene_data["Z-" + feature] = stats.zscore(gene_data[feature])
     
     dv.compare_metrics(scaled_genes, "Comparison of Metrics within Z-space", "metrics_comparison")
     
@@ -226,9 +232,15 @@ def calculate_interest_score(gene_data):
         )
     ).sort_values("Interest_score", ascending=False)
     
-    gene_data = pd.merge(gene_data, scaled_genes.loc[:, ["Gene_name", "Interest_score"]], on = "Gene_name")
+    scaled_genes = scaled_genes.rename(columns = {"Std" : "Scaled_std", "Anomalous_score" : "Scaled_anomalous_score", "Enhancer_count" : "Scaled_enhancer_count", "Enhancer_proportion" : "Scaled_enhancer_proportion", "Specific_gene_expression" : "Scaled_specific_gene_expression", "Gene_size" : "Scaled_gene_size"})
+    
+    gene_data = pd.merge(gene_data, scaled_genes.loc[:, ["Gene_name", "Interest_score", "Scaled_std", "Scaled_anomalous_score", "Scaled_enhancer_count", "Scaled_enhancer_proportion", "Scaled_specific_gene_expression", "Scaled_gene_size"]], on = "Gene_name")
     gene_data = iterate_through_hard_filters(gene_data)
     gene_data = gene_data.sort_values("Interest_score", ascending = False).reset_index()
+    
+    for feature in interesting_features:
+        
+        gene_data["Z-" + feature] = stats.zscore(gene_data[feature])
     
     return gene_data
 
@@ -300,7 +312,12 @@ def export_gene_scores_report(gene_data):
         report.write(config.read() + "\n")
         report.close()
         report = open((di.GENE_PRIORITISATION_REPORT_DIRECTORY + report_name), "a")
-        gene_data.loc[:, (["Gene_name"] + ["Interest_score"] + interesting_features)].to_csv(
+        gene_data.loc[:, (["Gene_name"] + ["Interest_score"] + interesting_features + ["Scaled_std",
+                                                                                       "Scaled_anomalous_score",
+                                                                                       "Scaled_enhancer_count",
+                                                                                       "Scaled_enhancer_proportion",
+                                                                                       "Scaled_specific_gene_expression",
+                                                                                       "Scaled_gene_size", "Z-Std", "Z-Anomalous_score", "Z-Enhancer_count", "Z-Enhancer_proportion", "Z-Specific_gene_expression", "Z-Gene_size"])].to_csv(
             (di.GENE_PRIORITISATION_REPORT_DIRECTORY + report_name), sep = "\t", index = True, mode = "a")
         report.close()
         

@@ -6,7 +6,7 @@ import data_initialisation as di
 
 global possible_plateau_insertions
 
-possible_plateau_insertions = pd.DataFrame(columns = ["Plateau", "Insertion_sequence", "Insertion_location"])
+possible_plateau_insertions = pd.DataFrame(columns = ["Sequence_name", "Insertion_sequence", "Insertion_location", "Plateau_sequence"])
 
 def find_fasta(plateaus):
     
@@ -29,15 +29,11 @@ def generate_pridict_input(plateaus):
     
     plateaus.apply(generate_insertion_prefixes_and_suffixes, axis = 1)
     
-    possible_plateau_insertions["Sequence"] = possible_plateau_insertions.apply(
-        lambda insertion :
-            insertion["Plateau_sequence"][:insertion["Insertion_location"]]
-        + "(+"
-        + insertion["Insertion_sequence"]
-        + ")"
-        + insertion["Plateau_sequence"][insertion["Insertion_location"]:])
+    possible_plateau_insertions["Sequence"] = possible_plateau_insertions.apply(insert_insertion_sequence, axis = 1)
     
-    print(possible_plateau_insertions.head(1))
+    #possible_plateau_insertions["Sequence"] = possible_plateau_insertions.apply(lambda insertion : insertion["Plateau_sequence"][:insertion["Insertion_location"]] + "(+" + insertion["Insertion_sequence"] + ")" + insertion["Plateau_sequence"][insertion["Insertion_location"]:])
+    
+    print(possible_plateau_insertions)
     
     possible_plateau_insertions.to_csv((di.RESULTS_DIRECTORY + "sequences_for_pridict.csv"), index = False, columns = ["Sequence_name", "Sequence"], mode = "w", header = False)
 
@@ -45,9 +41,7 @@ def generate_insertion_prefixes_and_suffixes(plateau):
     
     global possible_plateau_insertions
     
-    di.INSERTED_SEQUENCE
-    
-    plateau_specific_suggested_insertion_sites = pd.DataFrame(columns = ["Plateau", "Insertion_sequence", "Insertion_location"])
+    plateau_specific_suggested_insertion_sites = pd.DataFrame(columns = ["Sequence_name", "Insertion_sequence", "Insertion_location", "Plateau_sequence"])
     
     for number_of_bases_absent in range(0, len(di.INSERTED_SEQUENCE)):
     
@@ -60,7 +54,7 @@ def generate_insertion_prefixes_and_suffixes(plateau):
             
             for position in insertion_positions:
             
-                new_row = pd.Series({"Sequence_name" : (plateau["Gene_name"] + " " + plateau["Chromosome"] + " " + plateau["Strand"] + str(plateau["Start"]) + "-" + str(plateau["End"])), "Insertion_sequence" : absent_sequence, "Insertion_location" : position, "Plateau_sequence" : plateau["Sequence"]})
+                new_row = pd.Series({"Sequence_name" : (plateau["Gene_name"] + " " + plateau["Chromosome"] + " " + plateau["Strand"] + " "  + str(plateau["Start"]) + "-" + str(plateau["End"])), "Insertion_sequence" : absent_sequence, "Insertion_location" : position, "Plateau_sequence" : plateau["Sequence"]})
                 new_df = pd.DataFrame([new_row])
                 plateau_specific_suggested_insertion_sites = pd.concat([plateau_specific_suggested_insertion_sites, new_df], axis = 0, ignore_index = True)
                 
@@ -76,44 +70,10 @@ def find_prefix_suffix_in_plateau(plateau, present_sequence):
     insertion_positions = [index.start() for index in insertions]
     
     return insertion_positions
+
+def insert_insertion_sequence(row):
     
-def find_insertion_prefixes_and_suffixes2(plateaus):
-
-    #Within sequences of regions, finds prefixes and suffixes of sequence that is to be inserted
-
-    print("Finding possible insertion sites within each plateau...")
-
-    sequences_for_pridict = pd.DataFrame(columns = ["Sequence_name", "Sequence"])
-
-    for _, plateau in plateaus.iterrows():
-
-        print(plateau)
-
-        for amount_unfound in range(1, len(di.INSERTED_SEQUENCE)):
-            
-            print("Amount unfound: " + str(amount_unfound))
-            
-            for checking_insertion_position in range(1, len(di.INSERTED_SEQUENCE)):
-                
-                print("Position within insertion being checked: " + str(checking_insertion_position))
-                
-                missing_insertion = di.INSERTED_SEQUENCE[checking_insertion_position:(checking_insertion_position + amount_unfound)]
-                found_insertion = di.INSERTED_SEQUENCE[:checking_insertion_position] + di.INSERTED_SEQUENCE[(checking_insertion_position + amount_unfound):]
-                    
-                print("Missing insertion: " + missing_insertion)
-                print("Found insertion: " + found_insertion)    
-                    
-                for checking_plateau_position in range(len(plateau["Sequence"])):
-                
-                    print("Position within plateau: " + str(checking_plateau_position))
-                
-                    if "".join(str(plateau[checking_plateau_position:])).startswith(found_insertion):
-                        
-                        sequence_with_insertion = str(plateau[:(checking_plateau_position + checking_insertion_position)]) + "(+" + missing_insertion + ")" + str(plateau[(checking_plateau_position + checking_insertion_position):])
-                        print("Sequence with insertion: " + str(sequence_with_insertion))
-                        new_row = {"Sequence_name" : (plateau["Gene_name"] + " " + plateau["Chromosome"] + " " + plateau["Strand"]), "Sequence" : sequence_with_insertion}
-                        
-                        sequences_for_pridict = sequences_for_pridict.append(new_row, ignore_index = True)
-                    
-    return sequences_for_pridict
+    sequence = row["Plateau_sequence"][:row["Insertion_location"]] + "(+" + row["Insertion_sequence"] + ")" + row["Plateau_sequence"][row["Insertion_location"]:]
+    
+    return sequence
         
