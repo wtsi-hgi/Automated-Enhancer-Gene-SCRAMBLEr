@@ -189,7 +189,7 @@ def export_plateaus(gene_data):
         plateaus["Strand"] = gene["Strand"]
         
         plateaus = ss.find_fasta(plateaus)
-        sequences_for_pridict = ss.iterate_prefix_suffix_search(plateaus)
+        sequences_for_pridict = ss.generate_pridict_input(plateaus)
         
         print(sequences_for_pridict)
         

@@ -222,7 +222,7 @@ def calculate_interest_score(gene_data):
             scaled_genes["Enhancer_count"] * di.ENHANCER_COUNT_WEIGHT +
             scaled_genes["Enhancer_proportion"] * di.ENHANCER_PROPORTION_WEIGHT +
             scaled_genes["Specific_gene_expression"] * di.CELL_LINE_EXPRESSION_WEIGHT +
-            pow((2 * di.GENE_SIZE_WEIGHT), (scaled_genes["Gene_size"] * di.GENE_SIZE_WEIGHT * di.GENE_SIZE_WEIGHT))
+            (di.GENE_SIZE_WEIGHT * pow((2), (-scaled_genes["Gene_size"] * di.GENE_SIZE_WEIGHT * di.GENE_SIZE_WEIGHT)))
         )
     ).sort_values("Interest_score", ascending=False)
     

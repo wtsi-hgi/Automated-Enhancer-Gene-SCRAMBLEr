@@ -4,6 +4,10 @@ import re
 
 import data_initialisation as di
 
+global possible_plateau_insertions
+
+possible_plateau_insertions = pd.DataFrame(columns = ["Plateau", "Insertion_sequence", "Insertion_location"])
+
 def find_fasta(plateaus):
     
     #find_fasta takes coordinates of plateaus and returns FASTA sequence from reference genome
@@ -19,11 +23,27 @@ def find_fasta(plateaus):
     
     return plateaus
 
-def iterate_prefix_suffix_search(plateaus):
+def generate_pridict_input(plateaus):
+    
+    global possible_plateau_insertions
     
     plateaus.apply(generate_insertion_prefixes_and_suffixes, axis = 1)
+    
+    possible_plateau_insertions["Sequence"] = possible_plateau_insertions.apply(
+        lambda insertion :
+            insertion["Plateau_sequence"][:insertion["Insertion_location"]]
+        + "(+"
+        + insertion["Insertion_sequence"]
+        + ")"
+        + insertion["Plateau_sequence"][insertion["Insertion_location"]:])
+    
+    print(possible_plateau_insertions.head(1))
+    
+    possible_plateau_insertions.to_csv((di.RESULTS_DIRECTORY + "sequences_for_pridict.csv"), index = False, columns = ["Sequence_name", "Sequence"], mode = "w", header = False)
 
 def generate_insertion_prefixes_and_suffixes(plateau):
+    
+    global possible_plateau_insertions
     
     di.INSERTED_SEQUENCE
     
@@ -40,25 +60,21 @@ def generate_insertion_prefixes_and_suffixes(plateau):
             
             for position in insertion_positions:
             
-                new_row = pd.Series({"Plateau" : (plateau["Gene_name"] + " " + str(plateau["Start"]) + "-" + str(plateau["End"])), "Insertion_sequence" : absent_sequence, "Insertion_location" : position})
-                #plateau_specific_suggested_insertion_sites = plateau_specific_suggested_insertion_sites.append(new_row, ignore_index = True)
+                new_row = pd.Series({"Sequence_name" : (plateau["Gene_name"] + " " + plateau["Chromosome"] + " " + plateau["Strand"] + str(plateau["Start"]) + "-" + str(plateau["End"])), "Insertion_sequence" : absent_sequence, "Insertion_location" : position, "Plateau_sequence" : plateau["Sequence"]})
                 new_df = pd.DataFrame([new_row])
-                plateau_specific_suggested_insertion_sites = pd.concat([plateau_specific_suggested_insertion_sites, new_df], axis=0, ignore_index=True)
+                plateau_specific_suggested_insertion_sites = pd.concat([plateau_specific_suggested_insertion_sites, new_df], axis = 0, ignore_index = True)
                 
                 if len(plateau_specific_suggested_insertion_sites.index) > 100:
                     
+                    possible_plateau_insertions = pd.concat([possible_plateau_insertions, plateau_specific_suggested_insertion_sites], axis = 0, ignore_index = True)
+                    
                     break
-                
-    print(plateau_specific_suggested_insertion_sites)
-    #plateau_specific_suggested_insertion_sites.to_csv((di.RESULTS_DIRECTORY + (plateau["Gene_name"] + " " + str(plateau["Start"]) + "-" + str(plateau["End"])) + "sequences_for_pridict.csv"), index = False, columns = ["Sequence_name", "Sequence"], mode = "w", header = False)
     
 def find_prefix_suffix_in_plateau(plateau, present_sequence):
     
-    #insertion_positions = [index for index in range(len(plateau["Sequence"])) if plateau["Sequence"].startswith(present_sequence, index)]
-    #print(insertion_positions)
-    
     insertions = re.finditer(pattern = present_sequence, string = plateau["Sequence"])
     insertion_positions = [index.start() for index in insertions]
+    
     return insertion_positions
     
 def find_insertion_prefixes_and_suffixes2(plateaus):
