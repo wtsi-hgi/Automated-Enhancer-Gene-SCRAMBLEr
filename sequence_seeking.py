@@ -54,11 +54,11 @@ def generate_insertion_prefixes_and_suffixes(plateau):
             
             for position in insertion_positions:
             
-                new_row = pd.Series({"Sequence_name" : (plateau["Gene_name"] + " " + plateau["Chromosome"] + " " + plateau["Strand"] + " "  + str(plateau["Start"]) + "-" + str(plateau["End"])), "Insertion_sequence" : absent_sequence, "Insertion_location" : position, "Plateau_sequence" : plateau["Sequence"]})
+                new_row = pd.Series({"Sequence_name" : (plateau["Gene_name"] + " " + plateau["Chromosome"] + " " + plateau["Strand"] + " "  + str(plateau["Start"]) + "-" + str(plateau["End"])), "Insertion_sequence" : absent_sequence, "Insertion_location" : (position + insertion_sequence_position_being_checked), "Plateau_sequence" : plateau["Sequence"]})
                 new_df = pd.DataFrame([new_row])
                 plateau_specific_suggested_insertion_sites = pd.concat([plateau_specific_suggested_insertion_sites, new_df], axis = 0, ignore_index = True)
                 
-                if len(plateau_specific_suggested_insertion_sites.index) > 100:
+                if len(plateau_specific_suggested_insertion_sites.index) > di.PARTIAL_INSERTIONS_PER_REGION:
                     
                     possible_plateau_insertions = pd.concat([possible_plateau_insertions, plateau_specific_suggested_insertion_sites], axis = 0, ignore_index = True)
                     
@@ -73,7 +73,9 @@ def find_prefix_suffix_in_plateau(plateau, present_sequence):
 
 def insert_insertion_sequence(row):
     
-    sequence = row["Plateau_sequence"][:row["Insertion_location"]] + "(+" + row["Insertion_sequence"] + ")" + row["Plateau_sequence"][row["Insertion_location"]:]
-    
-    return sequence
+    return (row["Plateau_sequence"][:row["Insertion_location"]] + 
+                "(+" +
+                row["Insertion_sequence"] +
+                ")" + 
+                row["Plateau_sequence"][row["Insertion_location"]:])
         

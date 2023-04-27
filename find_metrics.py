@@ -215,7 +215,7 @@ def calculate_interest_score(gene_data):
     #scaled_genes.loc[:, interesting_features] = scaler.fit(scaled_genes.loc[:, interesting_features])
     #scaled_genes.loc[:, interesting_features] = scaler.transform(scaled_genes.loc[:, interesting_features])
     
-       for feature in interesting_features:
+    for feature in interesting_features:
         
         gene_data["Z-" + feature] = stats.zscore(gene_data[feature])
     

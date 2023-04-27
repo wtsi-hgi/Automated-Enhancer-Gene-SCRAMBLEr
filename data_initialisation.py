@@ -70,6 +70,7 @@ def read_config_file():
     global PLATEAU_THRESHOLD
     
     global INSERTED_SEQUENCE
+    global PARTIAL_INSERTIONS_PER_REGION
    
     try:
         
@@ -134,6 +135,7 @@ def read_config_file():
         PLATEAU_THRESHOLD = settings["plateau_threshold"]
         
         INSERTED_SEQUENCE = settings["inserted_sequence"]
+        PARTIAL_INSERTIONS_PER_REGION = settings["partial_insertion_per_region"]
             
     except:
         print("ERROR: Config file could not be read.")
