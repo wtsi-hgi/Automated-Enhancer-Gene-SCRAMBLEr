@@ -69,6 +69,8 @@ def convolve_step_function_to_average_windowed_density(gene_data, element_type):
             (gene["Search_window_start"] - (len(kernel) // 2)), 
             (gene["Search_window_start"] - (len(kernel) // 2) + len(convolution_y))))
 
+        gene, convolution_x, convolution_y = trim_convolution_ends(gene, convolution_x, convolution_y)
+
         gene_data.at[index, (element_type + "_convolution_x")] = convolution_x
         gene_data.at[index, (element_type + "_convolution_y")] = convolution_y
         
@@ -94,6 +96,21 @@ def get_kernel(kernel_shape, size, sigma):
         
     return kernel
 
+def trim_convolution_ends(gene, convolution_x, convolution_y):
+    
+    # Trims the ends of the convolution which overlap the ends of the step functions
+    
+    upstream_cut_off = gene["Enhancer_step_function_x"][0]
+    downstream_cut_off = gene["Enhancer_step_function_x"][-1]
+    
+    upstream_cut_off_index = np.where(convolution_x == upstream_cut_off)
+    downstream_cut_off_index = np.where(convolution_x == downstream_cut_off)
+    
+    convolution_x = convolution_x[upstream_cut_off_index[0][0]:downstream_cut_off_index[0][0]]
+    convolution_y = convolution_y[upstream_cut_off_index[0][0]:downstream_cut_off_index[0][0]]
+    
+    return gene, convolution_x, convolution_y
+
 def combine_convolutions(enhancer_convolution, quiescent_convolution):
     
     # combine_convolutions adds convolutions together, 
@@ -101,7 +118,7 @@ def combine_convolutions(enhancer_convolution, quiescent_convolution):
     print("Merging convolutions...")
 
     enhancer_convolution = np.negative(enhancer_convolution)
-    print(enhancer_convolution)
+
     combined_convolution = np.add(
         (enhancer_convolution * di.ENHANCER_CONVOLUTION_WEIGHT), 
         (quiescent_convolution * di.QUIESCENT_CONVOLUTION_WEIGHT))
@@ -130,9 +147,9 @@ def export_convolutions(gene_data):
     
 def find_plateaus(gene_data):
     
-    #   find_plateaus takes convolved coordinates, and applies a threshold to
-    #   separate the search window into regions based on the y-value of each
-    #   convolved base.
+    # find_plateaus takes convolved coordinates, and applies a threshold to
+    # separate the search window into regions based on the y-value of each
+    # convolved base.
     
     gene_data["Plateau_coordinates"] = ""
     gene_data["Plateau_starts"] = ""
@@ -169,7 +186,8 @@ def find_plateaus(gene_data):
     return gene_data
     
 def export_plateaus(gene_data):
-    #   export_plateaus saves plateaus associated with each gene as a bed file
+    
+    # export_plateaus saves plateaus associated with each gene as a bed file
     
     print("Exporting plateaus to bed file...")
     
@@ -189,9 +207,4 @@ def export_plateaus(gene_data):
         plateaus["Strand"] = gene["Strand"]
         
         plateaus = ss.find_fasta(plateaus)
-        sequences_for_pridict = ss.generate_pridict_input(plateaus)
-        
-        print(sequences_for_pridict)
-        
-        #plateau_regions.to_csv((di.RESULTS_DIRECTORY + "plateaus.bed"), sep = "\t", index = False, columns = ["Chromosome", "Start", "End", "Gene_name"], mode = "a", header = False)
-        #sequences_for_pridict.to_csv((di.RESULTS_DIRECTORY + "sequences_for_pridict.csv"), index = False, columns = ["Sequence_name", "Sequence"], mode = "w", header = False)
+        ss.generate_pridict_input(plateaus)

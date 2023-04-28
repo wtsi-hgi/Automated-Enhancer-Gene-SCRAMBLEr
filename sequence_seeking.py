@@ -25,19 +25,19 @@ def find_fasta(plateaus):
 
 def generate_pridict_input(plateaus):
     
+    #For each plateau, finds partial insertion sites, exports sequences with insertions to csv
+    
     global possible_plateau_insertions
     
     plateaus.apply(generate_insertion_prefixes_and_suffixes, axis = 1)
     
     possible_plateau_insertions["Sequence"] = possible_plateau_insertions.apply(insert_insertion_sequence, axis = 1)
     
-    #possible_plateau_insertions["Sequence"] = possible_plateau_insertions.apply(lambda insertion : insertion["Plateau_sequence"][:insertion["Insertion_location"]] + "(+" + insertion["Insertion_sequence"] + ")" + insertion["Plateau_sequence"][insertion["Insertion_location"]:])
-    
-    print(possible_plateau_insertions)
-    
     possible_plateau_insertions.to_csv((di.RESULTS_DIRECTORY + "sequences_for_pridict.csv"), index = False, columns = ["Sequence_name", "Sequence"], mode = "w", header = False)
 
 def generate_insertion_prefixes_and_suffixes(plateau):
+    
+    #Iteratively finds all possible partial insertions in order of length
     
     global possible_plateau_insertions
     
@@ -66,12 +66,16 @@ def generate_insertion_prefixes_and_suffixes(plateau):
     
 def find_prefix_suffix_in_plateau(plateau, present_sequence):
     
+    #Searches plateau sequences for partial insertion sequences
+    
     insertions = re.finditer(pattern = present_sequence, string = plateau["Sequence"])
     insertion_positions = [index.start() for index in insertions]
     
     return insertion_positions
 
 def insert_insertion_sequence(row):
+    
+    #Adds missing insertion sequence into partial insertions found in plateaus
     
     return (row["Plateau_sequence"][:row["Insertion_location"]] + 
                 "(+" +
