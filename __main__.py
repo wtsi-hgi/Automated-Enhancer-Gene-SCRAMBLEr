@@ -39,6 +39,7 @@ def main():
     gene_data = \
         fm.count_overlaps_per_gene(gene_data, enhancer_overlaps, element_type)
     gene_data = fm.find_nearby_enhancer_densities(gene_data, enhancer_overlaps)
+    gene_data = fm.find_symmetry_of_elements(gene_data, enhancer_overlaps)
     gene_data = fm.calculate_interest_score(gene_data)
     de.export_gene_scores_report(gene_data)
     

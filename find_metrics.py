@@ -2,8 +2,8 @@ import pandas as pd
 import pyranges as pr
 from sklearn.preprocessing import StandardScaler
 import hashlib
-import sys
 from scipy import stats
+import numpy as np
 
 import data_initialisation as di
 import region_convolutions as rc
@@ -11,7 +11,7 @@ import data_visualisation as dv
 
 interesting_features = ["Std", "Anomalous_score", "Enhancer_count",
                         "Enhancer_proportion", "Specific_gene_expression",
-                        "Gene_size"]
+                        "Gene_size", "Symmetry_ratio"]
 
 def find_mean(expression_data):
     
@@ -203,7 +203,7 @@ def count_overlaps_per_gene(genes, overlaps, element_type):
     
     print("Counting overlaps...")
 
-    overlaps.drop(["Start", "End"], axis = 1)
+    #overlaps.drop(["Start", "End"], axis = 1)
     genes = pd.merge(genes, 
                      overlaps.groupby("Gene_name").size().reset_index(
         name = (element_type + "_count")), 
@@ -227,6 +227,31 @@ def find_nearby_enhancer_densities(gene_data, overlaps):
             .sum().reset_index()
     gene_data = pd.merge(gene_data, overlaps, on = "Gene_name")
 
+    return gene_data
+    
+def find_symmetry_of_elements(gene_data, overlaps):
+    
+    # For each gene calculates the number of elements on one side compared
+    # to the other and produces a score of symmetry
+    
+    print("Assessing symmetry of elements near genes...")
+    
+    overlaps["Overlaps_upstream"] = overlaps\
+        .apply(lambda overlap : True if overlap["End"] <= 
+               overlap["Gene_start"] else False, axis = 1)
+        
+    overlaps_upstream = overlaps.loc[:, ["Gene_name", "Overlaps_upstream"]]\
+        .groupby(["Gene_name"], as_index = False)["Overlaps_upstream"]\
+            .sum().reset_index()
+            
+    gene_data = pd.merge(gene_data, overlaps_upstream, on = "Gene_name")
+    
+    gene_data["Symmetry_ratio"] = \
+        1 - (2 * (np.absolute((gene_data["Overlaps_upstream"] /
+                          gene_data["Enhancer_count"]) - 0.5)))
+
+    gene_data.drop(["Overlaps_upstream"], axis = 1)
+    
     return gene_data
     
 def calculate_interest_score(gene_data):
@@ -259,7 +284,8 @@ def calculate_interest_score(gene_data):
             scaled_genes["Specific_gene_expression"] * \
                 di.CELL_LINE_EXPRESSION_WEIGHT +
             (di.GENE_SIZE_WEIGHT * pow((2), (-scaled_genes["Gene_size"] * \
-                di.GENE_SIZE_WEIGHT * di.GENE_SIZE_WEIGHT)))
+                di.GENE_SIZE_WEIGHT * di.GENE_SIZE_WEIGHT))) +
+            scaled_genes["Symmetry_ratio"] * di.SYMMETRY_WEIGHT
         )
     ).sort_values("Interest_score", ascending=False)
     
@@ -270,13 +296,15 @@ def calculate_interest_score(gene_data):
                           "Enhancer_proportion" : "Scaled_enhancer_proportion",
                           "Specific_gene_expression" : \
                               "Scaled_specific_gene_expression",
-                          "Gene_size" : "Scaled_gene_size"})
+                          "Gene_size" : "Scaled_gene_size",
+                          "Symmetry_ratio" : "Scaled_symmetry_ratio"})
     
     gene_data = pd.merge(gene_data, scaled_genes.\
         loc[:, ["Gene_name", "Interest_score", "Scaled_std",
                 "Scaled_anomalous_score", "Scaled_enhancer_count",
                 "Scaled_enhancer_proportion",
-                "Scaled_specific_gene_expression", "Scaled_gene_size"]],
+                "Scaled_specific_gene_expression", "Scaled_gene_size",
+                "Scaled_symmetry_ratio"]],
         on = "Gene_name")
     gene_data = iterate_through_hard_filters(gene_data)
     gene_data = gene_data.\
@@ -290,7 +318,7 @@ def calculate_interest_score(gene_data):
 
 def iterate_through_hard_filters(gene_data):
     
-    #Calls apply_hard_filter for each feature's min and max filter
+    # Calls apply_hard_filter for each feature's min and max filter
     
     print("Applying hard filters...")
     
@@ -299,14 +327,16 @@ def iterate_through_hard_filters(gene_data):
                    di.ENHANCER_COUNT_MAX, 
                    di.ENHANCER_PROPORTION_MAX, 
                    di.CELL_LINE_EXPRESSION_MAX, 
-                   di.GENE_SIZE_MAX]
+                   di.GENE_SIZE_MAX,
+                   di.SYMMETRY_MAX]
     
     min_filters = [di.STD_MIN, 
                    di.ANOMALOUS_EXPRESSION_MIN, 
                    di.ENHANCER_COUNT_MIN, 
                    di.ENHANCER_PROPORTION_MIN, 
                    di.CELL_LINE_EXPRESSION_MIN, 
-                   di.GENE_SIZE_MIN]
+                   di.GENE_SIZE_MIN,
+                   di.SYMMETRY_MIN]
     
     for feature in interesting_features:
         

@@ -41,6 +41,8 @@ def read_config_file():
     global CELL_LINE_EXPRESSION_MIN
     global GENE_SIZE_MAX
     global GENE_SIZE_MIN
+    global SYMMETRY_MAX
+    global SYMMETRY_MIN
 
     global STD_WEIGHT
     global ANOMALOUS_EXPRESSION_WEIGHT
@@ -48,6 +50,7 @@ def read_config_file():
     global ENHANCER_PROPORTION_WEIGHT
     global CELL_LINE_EXPRESSION_WEIGHT
     global GENE_SIZE_WEIGHT
+    global SYMMETRY_WEIGHT
 
     global ENHANCER_KERNEL_SHAPE
     global ENHANCER_KERNEL_SIZE_TYPE
@@ -118,6 +121,8 @@ def read_config_file():
             settings["cell_line_expression_hard_filter_min"]
         GENE_SIZE_MAX = settings["gene_size_hard_filter_max"]
         GENE_SIZE_MIN = settings["gene_size_hard_filter_min"]
+        SYMMETRY_MAX = settings["symmetry_hard_filter_max"]
+        SYMMETRY_MIN = settings["symmetry_hard_filter_min"]
 
         STD_WEIGHT = settings["relative_std_weight"]
         ANOMALOUS_EXPRESSION_WEIGHT = \
@@ -128,6 +133,7 @@ def read_config_file():
         CELL_LINE_EXPRESSION_WEIGHT = \
             settings["relative_cell_line_expression_weight"]
         GENE_SIZE_WEIGHT = settings["relative_gene_size_weight"]
+        SYMMETRY_WEIGHT = settings["relative_symmetry_weight"]
 
         ENHANCER_KERNEL_SHAPE = settings["enhancer_kernel_shape"]
         ENHANCER_KERNEL_SIZE_TYPE = settings["enhancer_kernel_size_type"]

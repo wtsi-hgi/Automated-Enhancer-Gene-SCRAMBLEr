@@ -7,7 +7,7 @@ import sequence_seeking as ss
 
 interesting_features = ["Std", "Anomalous_score", "Enhancer_count",
                         "Enhancer_proportion", "Specific_gene_expression",
-                        "Gene_size"]
+                        "Gene_size", "Symmetry_ratio"]
 
 def export_gene_scores_report(gene_data):
     
@@ -40,12 +40,14 @@ def export_gene_scores_report(gene_data):
                            "Scaled_enhancer_proportion",
                            "Scaled_specific_gene_expression",
                            "Scaled_gene_size",
+                           "Scaled_symmetry_ratio",
                            "Z-Std",
                            "Z-Anomalous_score",
                            "Z-Enhancer_count",
                            "Z-Enhancer_proportion",
                            "Z-Specific_gene_expression",
-                           "Z-Gene_size"])].to_csv(
+                           "Z-Gene_size",
+                           "Z-Symmetry_ratio"])].to_csv(
             (di.GENE_PRIORITISATION_REPORT_DIRECTORY + report_name),
             sep = "\t", index = True, mode = "a")            
         report.close()
