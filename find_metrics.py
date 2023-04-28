@@ -9,9 +9,11 @@ import data_initialisation as di
 import region_convolutions as rc
 import data_visualisation as dv
 
-interesting_features = ["Std", "Anomalous_score", "Enhancer_count",
-                        "Enhancer_proportion", "Specific_gene_expression",
-                        "Gene_size", "Symmetry_ratio"]
+interesting_features = [
+    "Std", "Anomalous_score", "Enhancer_count",
+    "Enhancer_proportion", "Specific_gene_expression",
+    "Gene_size", "Symmetry_ratio"
+    ]
 
 def find_mean(expression_data):
     
@@ -20,9 +22,8 @@ def find_mean(expression_data):
     
     print("Finding mean of expression for each gene...")
     
-    expression_data["Mean"] = \
-        expression_data.loc[:, expression_data.columns != "Gene_name"]\
-            .mean(axis = 1)
+    expression_data["Mean"] = expression_data.loc[
+        :, expression_data.columns != "Gene_name"].mean(axis = 1)
     
     return expression_data
     
@@ -34,9 +35,8 @@ def find_std(expression_data):
     
     print("Finding standard deviation of expression for each gene...")
     
-    expression_data["Std"] = expression_data.loc[:, 
-                                                 expression_data.columns != \
-                                                     "Gene_name"].std(axis = 1)
+    expression_data["Std"] = expression_data.loc[
+        :, expression_data.columns != "Gene_name"].std(axis = 1)
     
     return expression_data
 
@@ -94,26 +94,35 @@ def find_interferring_genes(gene_data):
     genes_nearest_upstream = genes_nearest_upstream_pr.df
     genes_nearest_downstream = genes_nearest_downstream_pr.df
     
-    gene_data = pd.merge(gene_data, 
-                         genes_nearest_upstream\
-                             .loc[:, ["Gene_name",
-                                      "Start_upstream_interferring_gene",
-                                      "End_upstream_interferring_gene",
-                                      "Gene_name_upstream_interferring_gene"]],
-                             on = "Gene_name",
-                             how = "inner")
-    gene_data = pd.merge(gene_data, 
-                         genes_nearest_downstream\
-                             .loc[:, ["Gene_name",
-                                      "Start_downstream_interferring_gene",
-                                      "End_downstream_interferring_gene",
-                                      "Gene_name_downstream_interferring_gene"\
-                                          ]],
-                             on = "Gene_name",
-                             how = "inner")
+    gene_data = pd.merge(
+        gene_data, 
+        genes_nearest_upstream.loc[
+            :, 
+            ["Gene_name",
+             "Start_upstream_interferring_gene",
+             "End_upstream_interferring_gene",
+             "Gene_name_upstream_interferring_gene"
+            ]
+        ],
+        on = "Gene_name",
+        how = "inner"
+    )
+    
+    gene_data = pd.merge(
+        gene_data, 
+        genes_nearest_downstream.loc[
+            :, 
+            ["Gene_name",
+             "Start_downstream_interferring_gene",
+             "End_downstream_interferring_gene",
+             "Gene_name_downstream_interferring_gene"
+            ]
+        ],
+        on = "Gene_name",
+        how = "inner"
+    )
     
     if not di.INTERFERRING_GENE_OVERLAPS:
-        
         gene_data = gene_data.loc[
             gene_data["End_upstream_interferring_gene"] < \
                 gene_data["Gene_start"]]
@@ -136,14 +145,13 @@ def find_search_windows(genes):
     print("Finding sites to define search window...") 
     
     if (di.SEARCH_TYPE == "whole_gene"):
-        
         downstream_search_start = "Gene_end"
         
     elif (di.SEARCH_TYPE == "start_site"):
-        
         downstream_search_start = 'Gene_start'
         
-    else: print("ERROR : Invalid search type.")
+    else: 
+        print("ERROR : Invalid search type.")
         
     genes["Search_window_start"] = genes.apply(
         lambda gene : gene["Gene_start"] - di.UPSTREAM_SEARCH 
@@ -204,11 +212,13 @@ def count_overlaps_per_gene(genes, overlaps, element_type):
     print("Counting overlaps...")
 
     #overlaps.drop(["Start", "End"], axis = 1)
-    genes = pd.merge(genes, 
-                     overlaps.groupby("Gene_name").size().reset_index(
+    genes = pd.merge(
+        genes, 
+        overlaps.groupby("Gene_name").size().reset_index(
         name = (element_type + "_count")), 
-                     on = "Gene_name", 
-                     how = "inner")
+            on = "Gene_name", 
+            how = "inner"
+        )
     
     return genes
     
@@ -219,12 +229,16 @@ def find_nearby_enhancer_densities(gene_data, overlaps):
     
     print("Finding proximal enhancer densities...")
     
-    overlaps["Enhancer_proportion"] =\
-        (overlaps.loc[:, "End"] - overlaps.loc[:, "Start"]) /\
+    overlaps["Enhancer_proportion"] = (
+        overlaps.loc[:, "End"] - overlaps.loc[:, "Start"]) /\
             overlaps.loc[:, "Search_window_size"]
-    overlaps = overlaps.loc[:, ["Gene_name", "Enhancer_proportion"]]\
-        .groupby(["Gene_name"], as_index = False)["Enhancer_proportion"]\
-            .sum().reset_index()
+    
+    overlaps = overlaps.loc[
+        :, 
+        ["Gene_name", "Enhancer_proportion"]].groupby(
+        ["Gene_name"], 
+        as_index = False)["Enhancer_proportion"].sum().reset_index()
+    
     gene_data = pd.merge(gene_data, overlaps, on = "Gene_name")
 
     return gene_data
@@ -268,11 +282,13 @@ def calculate_interest_score(gene_data):
         scaler.fit_transform(scaled_genes.loc[:, interesting_features])
     
     for feature in interesting_features:
-        
         gene_data["Z-" + feature] = stats.zscore(gene_data[feature])
     
-    dv.compare_metrics(scaled_genes, "Comparison of Metrics within Z-space",
-                       "metrics_comparison")
+    dv.compare_metrics(
+        scaled_genes, 
+        "Comparison of Metrics within Z-space",
+        "metrics_comparison"
+    )
     
     scaled_genes = scaled_genes.assign(
         Interest_score = (
@@ -289,66 +305,82 @@ def calculate_interest_score(gene_data):
         )
     ).sort_values("Interest_score", ascending=False)
     
-    scaled_genes = scaled_genes.\
-        rename(columns = {"Std" : "Scaled_std",
-                          "Anomalous_score" : "Scaled_anomalous_score",
-                          "Enhancer_count" : "Scaled_enhancer_count",
-                          "Enhancer_proportion" : "Scaled_enhancer_proportion",
-                          "Specific_gene_expression" : \
-                              "Scaled_specific_gene_expression",
-                          "Gene_size" : "Scaled_gene_size",
-                          "Symmetry_ratio" : "Scaled_symmetry_ratio"})
+    scaled_genes = scaled_genes.rename(
+        columns = {
+            "Std" : "Scaled_std",
+            "Anomalous_score" : "Scaled_anomalous_score",
+            "Enhancer_count" : "Scaled_enhancer_count",
+            "Enhancer_proportion" : "Scaled_enhancer_proportion",
+            "Specific_gene_expression" : "Scaled_specific_gene_expression",
+            "Gene_size" : "Scaled_gene_size",
+            "Symmetry_ratio" : "Scaled_symmetry_ratio"
+        }
+    )
     
-    gene_data = pd.merge(gene_data, scaled_genes.\
-        loc[:, ["Gene_name", "Interest_score", "Scaled_std",
-                "Scaled_anomalous_score", "Scaled_enhancer_count",
-                "Scaled_enhancer_proportion",
-                "Scaled_specific_gene_expression", "Scaled_gene_size",
-                "Scaled_symmetry_ratio"]],
-        on = "Gene_name")
+    gene_data = pd.merge(
+        gene_data, 
+        scaled_genes.loc[:, [
+            "Gene_name", 
+            "Interest_score", 
+            "Scaled_std",
+            "Scaled_anomalous_score", 
+            "Scaled_enhancer_count",
+            "Scaled_enhancer_proportion",
+            "Scaled_specific_gene_expression", 
+            "Scaled_gene_size",
+            "Scaled_symmetry_ratio"
+            ]
+        ],
+        on = "Gene_name"
+    )
     gene_data = iterate_through_hard_filters(gene_data)
-    gene_data = gene_data.\
-        sort_values("Interest_score", ascending = False).reset_index()
+    gene_data = gene_data.sort_values(
+        "Interest_score", ascending = False).reset_index()
     
     for feature in interesting_features:
-        
         gene_data["Z-" + feature] = stats.zscore(gene_data[feature])
     
     return gene_data
 
 def iterate_through_hard_filters(gene_data):
-    
+
     # Calls apply_hard_filter for each feature's min and max filter
     
     print("Applying hard filters...")
     
-    max_filters = [di.STD_MAX, 
-                   di.ANOMALOUS_EXPRESSION_MAX, 
-                   di.ENHANCER_COUNT_MAX, 
-                   di.ENHANCER_PROPORTION_MAX, 
-                   di.CELL_LINE_EXPRESSION_MAX, 
-                   di.GENE_SIZE_MAX,
-                   di.SYMMETRY_MAX]
+    max_filters = [
+        di.STD_MAX, 
+        di.ANOMALOUS_EXPRESSION_MAX, 
+        di.ENHANCER_COUNT_MAX, 
+        di.ENHANCER_PROPORTION_MAX, 
+        di.CELL_LINE_EXPRESSION_MAX, 
+        di.GENE_SIZE_MAX,
+        di.SYMMETRY_MAX
+    ]
     
-    min_filters = [di.STD_MIN, 
-                   di.ANOMALOUS_EXPRESSION_MIN, 
-                   di.ENHANCER_COUNT_MIN, 
-                   di.ENHANCER_PROPORTION_MIN, 
-                   di.CELL_LINE_EXPRESSION_MIN, 
-                   di.GENE_SIZE_MIN,
-                   di.SYMMETRY_MIN]
+    min_filters = [
+        di.STD_MIN, 
+        di.ANOMALOUS_EXPRESSION_MIN, 
+        di.ENHANCER_COUNT_MIN, 
+        di.ENHANCER_PROPORTION_MIN, 
+        di.CELL_LINE_EXPRESSION_MIN, 
+        di.GENE_SIZE_MIN,
+        di.SYMMETRY_MIN
+    ]
     
     for feature in interesting_features:
+        gene_data = apply_hard_filter(
+            gene_data,
+            max_filters[interesting_features.index(feature)], 
+                feature, 
+                "max"
+        )
         
-        gene_data = \
-            apply_hard_filter(gene_data,
-                              max_filters[interesting_features.\
-                                  index(feature)], feature, "max")
-        
-        gene_data = \
-            apply_hard_filter(gene_data,
-                              min_filters[interesting_features.index(feature)],
-                              feature, "min")
+        gene_data = apply_hard_filter(
+            gene_data,
+            min_filters[interesting_features.index(feature)],
+            feature, "min"
+        )
     
     return gene_data
 
@@ -357,14 +389,14 @@ def apply_hard_filter(gene_data, filter, feature, minmax):
     #Drops data above max filter or below min filter
 
     if minmax == "max":
-        
-        if filter is not False: gene_data = \
-            gene_data.drop(gene_data[gene_data[feature] > filter].index)
+        if filter is not False: gene_data = gene_data.drop(
+                gene_data[gene_data[feature] > filter].index
+            )
         
     elif minmax == "min":
-
-        if filter is not False: gene_data = \
-            gene_data.drop(gene_data[gene_data[feature] < filter].index)
+        if filter is not False: gene_data = gene_data.drop(
+                gene_data[gene_data[feature] < filter].index
+            )
     
     else: 
         print("ERROR : Could not identify minmax.")
