@@ -9,16 +9,20 @@ import data_initialisation as di
 import region_convolutions as rc
 import data_visualisation as dv
 
-interesting_features = ["Std", "Anomalous_score", "Enhancer_count", "Enhancer_proportion", "Specific_gene_expression", "Gene_size"]
+interesting_features = ["Std", "Anomalous_score", "Enhancer_count",
+                        "Enhancer_proportion", "Specific_gene_expression",
+                        "Gene_size"]
 
 def find_mean(expression_data):
     
-    #Adds the mean of gene expression to the given expression data frame, giving
-    #a mean for each gene
+    # Adds the mean of gene expression to the given expression data frame,
+    # giving a mean for each gene
     
     print("Finding mean of expression for each gene...")
     
-    expression_data["Mean"] = expression_data.loc[:, expression_data.columns != "Gene_name"].mean(axis = 1)
+    expression_data["Mean"] = \
+        expression_data.loc[:, expression_data.columns != "Gene_name"]\
+            .mean(axis = 1)
     
     return expression_data
     
@@ -30,17 +34,22 @@ def find_std(expression_data):
     
     print("Finding standard deviation of expression for each gene...")
     
-    expression_data["Std"] = expression_data.loc[:, expression_data.columns != "Gene_name"].std(axis = 1)
+    expression_data["Std"] = expression_data.loc[:, 
+                                                 expression_data.columns != \
+                                                     "Gene_name"].std(axis = 1)
     
     return expression_data
 
 def find_anomalous_score_of_gene_expression(expression_data):
     
-    #Adds the z-score of each gene based on its expression in the cell line of interest compared to all others
+    # Adds the z-score of each gene based on its expression
+    # in the cell line of interest compared to all others
     
     print("Finding anomalies...")
     
-    expression_data["Anomalous_score"] = expression_data.apply(lambda gene : (gene["General_gene_expression"] - gene["Mean"]) / gene["Std"], axis = 1)
+    expression_data["Anomalous_score"] = expression_data.\
+        apply(lambda gene : (gene["General_gene_expression"] - 
+                             gene["Mean"]) / gene["Std"], axis = 1)
 
     return expression_data
 
@@ -68,7 +77,8 @@ def find_interferring_genes(gene_data):
     gene_data["End"] = gene_data["Gene_end"]
     
     interferring_genes_search = pr.PyRanges(
-        gene_data.loc[gene_data["Specific_gene_expression"] > di.CELL_LINE_SPECIFIC_EXPRESSION_THRESHOLD])
+        gene_data.loc[gene_data["Specific_gene_expression"] > \
+            di.CELL_LINE_SPECIFIC_EXPRESSION_THRESHOLD])
     
     gene_search = pr.PyRanges(gene_data)
     genes_nearest_upstream_pr = gene_search.nearest(
@@ -85,26 +95,31 @@ def find_interferring_genes(gene_data):
     genes_nearest_downstream = genes_nearest_downstream_pr.df
     
     gene_data = pd.merge(gene_data, 
-                         genes_nearest_upstream.loc[:, ["Gene_name", 
-                                                        "Start_upstream_interferring_gene", 
-                                                        "End_upstream_interferring_gene", 
-                                                        "Gene_name_upstream_interferring_gene"]], 
-                                                        on = "Gene_name", 
-                                                        how = "inner")
+                         genes_nearest_upstream\
+                             .loc[:, ["Gene_name",
+                                      "Start_upstream_interferring_gene",
+                                      "End_upstream_interferring_gene",
+                                      "Gene_name_upstream_interferring_gene"]],
+                             on = "Gene_name",
+                             how = "inner")
     gene_data = pd.merge(gene_data, 
-                         genes_nearest_downstream.loc[:, ["Gene_name", 
-                                                          "Start_downstream_interferring_gene", 
-                                                          "End_downstream_interferring_gene", 
-                                                          "Gene_name_downstream_interferring_gene"]], 
-                                                          on = "Gene_name", 
-                                                          how = "inner")
+                         genes_nearest_downstream\
+                             .loc[:, ["Gene_name",
+                                      "Start_downstream_interferring_gene",
+                                      "End_downstream_interferring_gene",
+                                      "Gene_name_downstream_interferring_gene"\
+                                          ]],
+                             on = "Gene_name",
+                             how = "inner")
     
     if not di.INTERFERRING_GENE_OVERLAPS:
         
         gene_data = gene_data.loc[
-            gene_data["End_upstream_interferring_gene"] < gene_data["Gene_start"]]
+            gene_data["End_upstream_interferring_gene"] < \
+                gene_data["Gene_start"]]
         gene_data = gene_data.loc[
-            gene_data["Start_downstream_interferring_gene"] > gene_data["Gene_end"]]
+            gene_data["Start_downstream_interferring_gene"] > \
+                gene_data["Gene_end"]]
         
     gene_data.drop(["Start", "End"], axis = 1) 
     
@@ -120,8 +135,14 @@ def find_search_windows(genes):
 
     print("Finding sites to define search window...") 
     
-    if (di.SEARCH_TYPE == "whole_gene"): downstream_search_start = "Gene_end"
-    elif (di.SEARCH_TYPE == "start_site"): downstream_search_start = 'Gene_start'
+    if (di.SEARCH_TYPE == "whole_gene"):
+        
+        downstream_search_start = "Gene_end"
+        
+    elif (di.SEARCH_TYPE == "start_site"):
+        
+        downstream_search_start = 'Gene_start'
+        
     else: print("ERROR : Invalid search type.")
         
     genes["Search_window_start"] = genes.apply(
@@ -141,15 +162,18 @@ def find_search_windows(genes):
     
     genes["Search_window_start"] = genes.apply(
         lambda gene : gene["End_upstream_interferring_gene"] 
-        if gene["Search_window_start"] < gene["End_upstream_interferring_gene"] 
+        if gene["Search_window_start"] < \
+            gene["End_upstream_interferring_gene"] 
         else gene["Search_window_start"], axis = 1)
     
     genes["Search_window_end"] = genes.apply(
         lambda gene : gene["Start_downstream_interferring_gene"] 
-        if gene["Search_window_end"] > gene["Start_downstream_interferring_gene"] 
+        if gene["Search_window_end"] > \
+            gene["Start_downstream_interferring_gene"] 
         else gene["Search_window_end"], axis = 1)
         
-    genes["Search_window_size"] = (genes["Search_window_end"] - genes["Search_window_start"])
+    genes["Search_window_size"] = \
+        (genes["Search_window_end"] - genes["Search_window_start"])
                 
     return genes
     
@@ -316,54 +340,3 @@ def apply_hard_filter(gene_data, filter, feature, minmax):
         print("ERROR : Could not identify minmax.")
     
     return gene_data
-
-def export_gene_scores_report(gene_data):
-    
-    #Idealy this will not read from file but from passed argument
-    
-    #Md5 checksum of config file is generated. Gene prioritisation report file
-    #is created and checksum is included in name to differentiate different
-    #configs. Report saved in given location.
-    
-    print("Exporting gene prioritisation report...")
-    
-    checksum = generate_config_checksum()
-    
-    with open(sys.argv[1], "r") as config:
-        
-        report_name = \
-            "gene_prioritisation_report_" + checksum.hexdigest() + ".txt"
-        report = \
-            open((di.GENE_PRIORITISATION_REPORT_DIRECTORY + report_name), "w")
-        report.write(config.read() + "\n")
-        report.close()
-        report = \
-            open((di.GENE_PRIORITISATION_REPORT_DIRECTORY + report_name), "a")
-        gene_data.loc[:, (["Gene_name"] +
-                          ["Interest_score"] + 
-                          interesting_features +
-                          ["Scaled_std",
-                           "Scaled_anomalous_score",
-                           "Scaled_enhancer_count",
-                           "Scaled_enhancer_proportion",
-                           "Scaled_specific_gene_expression",
-                           "Scaled_gene_size",
-                           "Z-Std",
-                           "Z-Anomalous_score",
-                           "Z-Enhancer_count",
-                           "Z-Enhancer_proportion",
-                           "Z-Specific_gene_expression",
-                           "Z-Gene_size"])].to_csv(
-            (di.GENE_PRIORITISATION_REPORT_DIRECTORY + report_name),
-            sep = "\t", index = True, mode = "a")            
-        report.close()
-        
-def generate_config_checksum():
-
-    checksum = hashlib.md5()
-    
-    with open(sys.argv[1], "rb") as config:
-        for chunk in iter(lambda: config.read(4096), b""):
-            checksum.update(chunk)
-        
-    return checksum

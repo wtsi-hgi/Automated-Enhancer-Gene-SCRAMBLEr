@@ -148,30 +148,6 @@ def combine_convolutions(enhancer_convolution, quiescent_convolution):
     
     return combined_convolution
     
-def export_convolutions(gene_data):
-    
-    #   Coordinates of convolutions are exported to wig file, for each gene
-    
-    print("Exporting enhancer density convolutions to wig file...")
-    
-    for index, gene in gene_data.head(di.CONVOLUTION_LIMIT).iterrows():
-        with open((di.RESULTS_DIRECTORY +
-            gene["Gene_name"] + "_convolutions.wiggle"), "w") as f:
-            
-            f.write("fixedStep chrom=chr" +
-                gene["Chromosome"] + " start=" +
-                    str(gene["Enhancer_convolution_x"][0]) + " step=1")
-            f.write("\n")
-    
-        convolution_signal = pd.DataFrame({"Convolution_signal" : \
-            gene_data.loc[index, "Enhancer_convolution_y"]})
-        convolution_signal.to_csv(
-            (di.RESULTS_DIRECTORY + gene["Gene_name"] + "_convolutions.wig"), 
-            sep = "\t", 
-            index = False, 
-            mode = "a", 
-            header = False)
-    
 def find_plateaus(gene_data):
     
     # find_plateaus takes convolved coordinates, and applies a threshold to
@@ -220,27 +196,3 @@ def find_plateaus(gene_data):
         gene_data.drop(["Plateau_coordinates"], axis = 1)
         
     return gene_data
-    
-def export_plateaus(gene_data):
-    
-    # export_plateaus saves plateaus associated with each gene as a bed file
-    
-    print("Exporting plateaus to bed file...")
-    
-    with open((di.RESULTS_DIRECTORY + "plateaus.bed"), "w") as f:
-            f.write("Chromosome Start	End	Gene_name")
-            f.write("\n")
-
-    for index, gene in gene_data.head(di.CONVOLUTION_LIMIT).iterrows():
-        
-        plateaus = pd.DataFrame(
-            {"Start" : gene_data.loc[index, "Plateau_starts"], 
-             "End" : gene_data.loc[index, "Plateau_ends"]
-            }
-        )
-        plateaus["Gene_name"] = gene["Gene_name"]
-        plateaus["Chromosome"] = "chr" + gene["Chromosome"]
-        plateaus["Strand"] = gene["Strand"]
-        
-        plateaus = ss.find_fasta(plateaus)
-        ss.generate_pridict_input(plateaus)

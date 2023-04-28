@@ -39,6 +39,7 @@ def generate_pridict_input(plateaus):
     possible_plateau_insertions["Sequence"] = possible_plateau_insertions\
         .apply(insert_insertion_sequence, axis = 1)
     
+    #This should probably be its own functin in data exportation
     possible_plateau_insertions\
         .to_csv((di.RESULTS_DIRECTORY + "sequences_for_pridict.csv"),
                 index = False, columns = ["Sequence_name", "Sequence"],
