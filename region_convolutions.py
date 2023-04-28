@@ -12,10 +12,14 @@ def generate_step_function_of_overlaps(gene_data, overlaps):
     
     print("Generating step function of overlaps within search window...")
     
-    gene_data['Enhancer_step_function_x'] = gene_data.apply(step_function_x, axis = 1)
-    gene_data['Enhancer_step_function_y'] = gene_data.apply(step_function_y, args = (overlaps,), axis = 1)
+    gene_data['Enhancer_step_function_x'] = \
+        gene_data.apply(step_function_x, axis = 1)
+    gene_data['Enhancer_step_function_y'] = \
+        gene_data.apply(step_function_y, args = (overlaps,), axis = 1)
     
-    gene_data = gene_data.sort_values("Interest_score", ascending = False).reset_index(drop = True)
+    gene_data = \
+        gene_data.sort_values("Interest_score", ascending = False)\
+            .reset_index(drop = True)
     
     return gene_data
 
@@ -32,7 +36,8 @@ def step_function_y(row, overlaps):
     # for the search window
     
     step_function = np.zeros(len(row['Enhancer_step_function_x']), dtype = int)
-    overlapping_elements = overlaps.loc[overlaps["Gene_name"] == row["Gene_name"]]
+    overlapping_elements = \
+        overlaps.loc[overlaps["Gene_name"] == row["Gene_name"]]
     
     for i in range(len(overlapping_elements)):
         
@@ -40,36 +45,49 @@ def step_function_y(row, overlaps):
         stop = overlapping_elements.at[overlapping_elements.index[i], 'End']
         
         in_range = np.logical_and(
-            row['Enhancer_step_function_x'] >= start, row['Enhancer_step_function_x'] <= stop)
+            row['Enhancer_step_function_x'] >= \
+                start, row['Enhancer_step_function_x'] <= stop)
         
         step_function = np.logical_or(step_function, in_range)
     
     return step_function.astype(int)
     
-def convolve_step_function_to_average_windowed_density(gene_data, element_type):
+def convolve_step_function_to_average_windowed_density\
+    (gene_data, element_type):
 
-    # X and Y coordinates are generated for convolution of element step function
-    # with chosen kernel
+    # X and Y coordinates are generated for convolution
+    # of element step function with chosen kernel
 
-    print("Converting step functions to convolved average windowed density signal...")
+    print("Converting step functions to convolved average density signal...")
 
-    gene_data[(element_type + "_convolution_x")] = [np.empty(0, dtype = float)] * len(gene_data)
-    gene_data[(element_type + "_convolution_y")] = [np.empty(0, dtype = float)] * len(gene_data)
+    gene_data[(element_type + "_convolution_x")] = \
+        [np.empty(0, dtype = float)] * len(gene_data)
+    gene_data[(element_type + "_convolution_y")] = \
+        [np.empty(0, dtype = float)] * len(gene_data)
     
-    gene_data = gene_data.sort_values("Interest_score", ascending = False).reset_index(drop = True)
+    gene_data = gene_data\
+        .sort_values("Interest_score", ascending = False)\
+        .reset_index(drop = True)
 
     for index, gene in gene_data.head(di.CONVOLUTION_LIMIT).iterrows():
         
         kernel = get_kernel(di.ENHANCER_KERNEL_SHAPE, 
-                            int((di.RELATIVE_ENHANCER_KERNEL_SIZE * (gene["Search_window_end"] - gene["Search_window_start"]))), 
-                            int(di.RELATIVE_ENHANCER_KERNEL_SIGMA * (gene["Search_window_end"] - gene["Search_window_start"])))
+                            int((di.RELATIVE_ENHANCER_KERNEL_SIZE * \
+                                (gene["Search_window_end"] - 
+                                 gene["Search_window_start"]))), 
+                            int(di.RELATIVE_ENHANCER_KERNEL_SIGMA * \
+                                (gene["Search_window_end"] - 
+                                 gene["Search_window_start"])))
         
-        convolution_y = np.convolve(kernel, gene[(element_type + "_step_function_y")])
+        convolution_y = np.convolve(kernel, gene[(element_type + 
+                                                  "_step_function_y")])
         convolution_x = (np.arange(
             (gene["Search_window_start"] - (len(kernel) // 2)), 
-            (gene["Search_window_start"] - (len(kernel) // 2) + len(convolution_y))))
+            (gene["Search_window_start"] - (len(kernel) // 2) + 
+             len(convolution_y))))
 
-        gene, convolution_x, convolution_y = trim_convolution_ends(gene, convolution_x, convolution_y)
+        gene, convolution_x, convolution_y = \
+            trim_convolution_ends(gene, convolution_x, convolution_y)
 
         gene_data.at[index, (element_type + "_convolution_x")] = convolution_x
         gene_data.at[index, (element_type + "_convolution_y")] = convolution_y
@@ -98,7 +116,8 @@ def get_kernel(kernel_shape, size, sigma):
 
 def trim_convolution_ends(gene, convolution_x, convolution_y):
     
-    # Trims the ends of the convolution which overlap the ends of the step functions
+    # Trims the ends of the convolutions 
+    # which overlap the ends of the step functions
     
     upstream_cut_off = gene["Enhancer_step_function_x"][0]
     downstream_cut_off = gene["Enhancer_step_function_x"][-1]
@@ -106,8 +125,12 @@ def trim_convolution_ends(gene, convolution_x, convolution_y):
     upstream_cut_off_index = np.where(convolution_x == upstream_cut_off)
     downstream_cut_off_index = np.where(convolution_x == downstream_cut_off)
     
-    convolution_x = convolution_x[upstream_cut_off_index[0][0]:downstream_cut_off_index[0][0]]
-    convolution_y = convolution_y[upstream_cut_off_index[0][0]:downstream_cut_off_index[0][0]]
+    convolution_x = \
+        convolution_x[upstream_cut_off_index[0][0]:\
+            downstream_cut_off_index[0][0]]
+    convolution_y = \
+        convolution_y[upstream_cut_off_index[0][0]:\
+            downstream_cut_off_index[0][0]]
     
     return gene, convolution_x, convolution_y
 
@@ -132,12 +155,16 @@ def export_convolutions(gene_data):
     print("Exporting enhancer density convolutions to wig file...")
     
     for index, gene in gene_data.head(di.CONVOLUTION_LIMIT).iterrows():
-        with open((di.RESULTS_DIRECTORY + gene["Gene_name"] + "_convolutions.wiggle"), "w") as f:
+        with open((di.RESULTS_DIRECTORY +
+            gene["Gene_name"] + "_convolutions.wiggle"), "w") as f:
             
-            f.write("fixedStep chrom=chr" + gene["Chromosome"] + " start=" + str(gene["Enhancer_convolution_x"][0]) +" step=1")
+            f.write("fixedStep chrom=chr" +
+                gene["Chromosome"] + " start=" +
+                    str(gene["Enhancer_convolution_x"][0]) + " step=1")
             f.write("\n")
     
-        convolution_signal = pd.DataFrame({"Convolution_signal" : gene_data.loc[index, "Enhancer_convolution_y"]})
+        convolution_signal = pd.DataFrame({"Convolution_signal" : \
+            gene_data.loc[index, "Enhancer_convolution_y"]})
         convolution_signal.to_csv(
             (di.RESULTS_DIRECTORY + gene["Gene_name"] + "_convolutions.wig"), 
             sep = "\t", 
@@ -159,18 +186,27 @@ def find_plateaus(gene_data):
     
     for index, gene in gene_data.head(di.CONVOLUTION_LIMIT).iterrows():
         
-        print("Finding plateaus for gene " + gene["Gene_name"] + " (" + str(index + 1) + " of " + str(di.CONVOLUTION_LIMIT) + ")...")
+        print("Finding plateaus for gene " +
+              gene["Gene_name"] +
+              " (" +
+              str(index + 1) +
+              " of " +
+              str(di.CONVOLUTION_LIMIT) +
+              ")...")
         
         convolved_x = gene["Enhancer_convolution_x"]
         convolved_y = gene["Enhancer_convolution_y"]
         convolved_y = np.append(convolved_y, 0)
         boolean_below_threshold = convolved_y < di.PLATEAU_THRESHOLD
         boolean_below_threshold = np.concatenate(
-            (boolean_below_threshold[:(int((gene["Gene_start"] - convolved_x[0])))], 
+            (boolean_below_threshold[:(int((gene["Gene_start"] -
+                                            convolved_x[0])))], 
              np.full((gene["Gene_end"] -  gene["Gene_start"]), False), 
-             boolean_below_threshold[((int(gene["Gene_end"] - convolved_x[0]))):]))
+             boolean_below_threshold[((int(gene["Gene_end"] -
+                                           convolved_x[0]))):]))
         
-        boolean_below_threshold = (boolean_below_threshold[:-1] != boolean_below_threshold[1:])
+        boolean_below_threshold = \
+            (boolean_below_threshold[:-1] != boolean_below_threshold[1:])
         plateau_coordinates = convolved_x[boolean_below_threshold]
         plateau_coordinates = np.concatenate(
             [[convolved_x[0]], 

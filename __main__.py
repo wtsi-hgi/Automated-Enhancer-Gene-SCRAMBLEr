@@ -14,8 +14,12 @@ def main():
     gene_annotations = di.read_gene_annotations()
     general_expression_data = di.read_general_expression_data()
     specific_expression_data = di.read_specific_expression_data()
-    gene_data = pd.merge(gene_annotations, general_expression_data, on = "Gene_name", how = "inner")
-    gene_data = pd.merge(gene_data, specific_expression_data, on = "Gene_name", how = "inner")
+    gene_data = pd.merge(gene_annotations,
+                         general_expression_data,
+                         on = "Gene_name", how = "inner")
+    gene_data = pd.merge(gene_data,
+                         specific_expression_data,
+                         on = "Gene_name", how = "inner")
     
     del gene_annotations, general_expression_data, specific_expression_data
     
@@ -27,16 +31,21 @@ def main():
     enhancers = di.clean_regulatory_elements(regulatory_elements, element_type)
     del regulatory_elements
     
-    enhancer_overlaps = fm.find_element_overlaps_within_search_window(enhancers, gene_data)
+    enhancer_overlaps = \
+        fm.find_element_overlaps_within_search_window(enhancers, gene_data)
     del enhancers
     
-    gene_data = fm.count_overlaps_per_gene(gene_data, enhancer_overlaps, element_type)
+    gene_data = \
+        fm.count_overlaps_per_gene(gene_data, enhancer_overlaps, element_type)
     gene_data = fm.find_nearby_enhancer_densities(gene_data, enhancer_overlaps)
     gene_data = fm.calculate_interest_score(gene_data)
     fm.export_gene_scores_report(gene_data)
     
-    gene_data = rc.generate_step_function_of_overlaps(gene_data, enhancer_overlaps)
-    gene_data = rc.convolve_step_function_to_average_windowed_density(gene_data, element_type)
+    gene_data = \
+        rc.generate_step_function_of_overlaps(gene_data, enhancer_overlaps)
+    gene_data = \
+        rc.convolve_step_function_to_average_windowed_density(gene_data,
+                                                              element_type)
     del enhancer_overlaps
     
     gene_data = rc.find_plateaus(gene_data)
