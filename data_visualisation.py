@@ -7,7 +7,6 @@ def data_exploration(expression):
     print("Visualising data...")
     global relative_expression, overlaps, genes
     relative_expression = expression.sort_values(by = ["Std"], ascending = False)
-    #relative_expression = relative_expression[relative_expression["mean"] < relative_expression["HAP1"]]
     relative_expression["Difference"] = relative_expression[di.CELL_LINE_OF_INTEREST] - relative_expression["Mean"]
 
     figure, axis = plt.subplots(1, 3, figsize = (18.5, 10.5))
@@ -49,9 +48,6 @@ def plot_convolutions(gene, step_x, gene_basewise, conv_x, gene_convolution):
     axis[0].plot(step_x, gene_basewise, c = "green")
     axis[0].set(xlabel = "Coordinate on chromosome " + gene["Chromosome"])
     axis[0].plot(conv_x, gene_convolution, c = "orange")
-    #axis[0].plot((peaks + (gene.Start - ((len(conv_x) - len(step_x)) / 2))), gene_convolution[peaks], "x")
-    #axis[0].plot(conv_x, peaks, "x")
-    #axis[0].set(xlabel = "Coordinate on chromosome " + gene["Chromosome"])
     
     plt.savefig(di.RESULTS_DIRECTORY + gene["Gene_name"] + "_enhancer_convolution")
     plt.close()
@@ -179,12 +175,6 @@ def gene_report(gene_data):
         for plateau_end in gene["Plateau_ends"]:
             
             axis[3].axvline(x = plateau_end, c = "orange")
-        
-        #axis[0].set(xlabel = "Coordinate on chromosome " + gene["Chromosome"])
-        #axis[0].plot(conv_x, gene_convolution, c = "orange")
-        #axis[0].plot((peaks + (gene.Start - ((len(conv_x) - len(step_x)) / 2))), gene_convolution[peaks], "x")
-        #axis[0].plot(conv_x, peaks, "x")
-        #axis[0].set(xlabel = "Coordinate on chromosome " + gene["Chromosome"])
         
         plt.savefig(di.RESULTS_DIRECTORY + gene["Gene_name"] + "_enhancer_convolution")
         plt.close()

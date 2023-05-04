@@ -4,6 +4,7 @@ import data_initialisation as di
 import find_metrics as fm
 import region_convolutions as rc
 import data_visualisation as dv
+import data_exportation as de
 
 merge_on_column = "Gene_name"
 how_to_merge = "inner"
@@ -15,8 +16,12 @@ def main():
     gene_annotations = di.read_gene_annotations()
     general_expression_data = di.read_general_expression_data()
     specific_expression_data = di.read_specific_expression_data()
-    gene_data = pd.merge(gene_annotations, general_expression_data, on = merge_on_column, how = how_to_merge)
-    gene_data = pd.merge(gene_data, specific_expression_data, on = merge_on_column, how = how_to_merge)
+    gene_data = pd.merge(gene_annotations,
+                         general_expression_data,
+                         on = "Gene_name", how = "inner")
+    gene_data = pd.merge(gene_data,
+                         specific_expression_data,
+                         on = "Gene_name", how = "inner")
     
     del gene_annotations, general_expression_data, specific_expression_data
     
@@ -26,20 +31,26 @@ def main():
     
     enhancers = di.read_regulatory_elements()
     
-    enhancer_overlaps = fm.find_element_overlaps_within_search_window(enhancers, gene_data)
+    enhancer_overlaps = \
+        fm.find_element_overlaps_within_search_window(enhancers, gene_data)
     del enhancers
     
     gene_data = fm.count_overlaps_per_gene(gene_data, enhancer_overlaps, element_type)
     gene_data = fm.find_nearby_enhancer_densities(gene_data, enhancer_overlaps)
+    gene_data = fm.find_symmetry_of_elements(gene_data, enhancer_overlaps)
     gene_data = fm.calculate_interest_score(gene_data)
+    de.export_gene_scores_report(gene_data)
     
-    gene_data = rc.generate_step_function_of_overlaps(gene_data, enhancer_overlaps)
-    gene_data = rc.convolve_step_function_to_average_windowed_density(gene_data, element_type)
+    gene_data = \
+        rc.generate_step_function_of_overlaps(gene_data, enhancer_overlaps)
+    gene_data = \
+        rc.convolve_step_function_to_average_windowed_density(gene_data,
+                                                              element_type)
     del enhancer_overlaps
     
     gene_data = rc.find_plateaus(gene_data)
-    rc.export_convolutions(gene_data)
-    rc.export_plateaus(gene_data) 
+    de.export_convolutions(gene_data)
+    de.export_plateaus(gene_data) 
     
 if __name__ == "__main__":
     main()
