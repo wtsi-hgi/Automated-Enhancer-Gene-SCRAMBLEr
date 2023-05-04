@@ -261,8 +261,8 @@ def find_symmetry_of_elements(gene_data, overlaps):
     gene_data = pd.merge(gene_data, overlaps_upstream, on = "Gene_name")
     
     gene_data["Symmetry_ratio"] = \
-        1 - (2 * (np.absolute((gene_data["Overlaps_upstream"] /
-                          gene_data["Enhancer_count"]) - 0.5)))
+        2 * (np.absolute((gene_data["Overlaps_upstream"] /
+                          gene_data["Enhancer_count"]) - 0.5))
 
     gene_data.drop(["Overlaps_upstream"], axis = 1)
     
