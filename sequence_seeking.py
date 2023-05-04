@@ -1,17 +1,123 @@
 import pyranges as pr
+import pandas as pd
+import re
 
 import data_initialisation as di
 
-def find_fasta(plateau_regions):
+global possible_plateau_insertions
+
+possible_plateau_insertions = pd.DataFrame(columns = ["Sequence_name",
+                                                      "Insertion_sequence",
+                                                      "Insertion_location",
+                                                      "Plateau_sequence"])
+
+def find_fasta(plateaus):
     
-    #find_fasta takes coordinates of plateaus and returns FASTA sequence from reference genome
+    # find_fasta takes coordinates of plateaus and returns FASTA
+    # sequence from reference genome
     
     print("Finding FASTA sequences from intervals...")
     
-    plateau_regions_pr = pr.PyRanges(plateau_regions)
+    plateaus_pr = pr.PyRanges(plateaus)
     
-    seq = pr.get_sequence(plateau_regions_pr, di.REFERENCE_GENOME)
-    plateau_regions_pr.seq = seq
-    plateau_regions = plateau_regions_pr.df
+    seq = pr.get_sequence(plateaus_pr, di.REFERENCE_GENOME)
+    plateaus_pr.seq = seq
+    plateaus = plateaus_pr.df
+    plateaus = plateaus.rename(columns = {"seq" : "Sequence"})
     
-    return plateau_regions
+    return plateaus
+
+def generate_pridict_input(plateaus):
+    
+    # For each plateau, finds partial insertion sites, 
+    # exports sequences with insertions to csv
+    
+    global possible_plateau_insertions
+    
+    plateaus.apply(generate_insertion_prefixes_and_suffixes, axis = 1)
+    
+    possible_plateau_insertions["Sequence"] = possible_plateau_insertions\
+        .apply(insert_insertion_sequence, axis = 1)
+    
+    #This should probably be its own functin in data exportation
+    possible_plateau_insertions\
+        .to_csv((di.RESULTS_DIRECTORY + "sequences_for_pridict.csv"),
+                index = False, columns = ["Sequence_name", "Sequence"],
+                mode = "w", header = False)
+
+def generate_insertion_prefixes_and_suffixes(plateau):
+    
+    #Iteratively finds all possible partial insertions in order of length
+    
+    global possible_plateau_insertions
+    
+    plateau_specific_suggested_insertion_sites = \
+        pd.DataFrame(columns = ["Sequence_name", "Insertion_sequence",
+                                "Insertion_location", "Plateau_sequence"])
+    
+    for number_of_bases_absent in range(0, len(di.INSERTED_SEQUENCE)):
+    
+        for insertion_sequence_position_being_checked in \
+            range(0,(len(di.INSERTED_SEQUENCE) - number_of_bases_absent)):
+            
+            absent_sequence = \
+                di.INSERTED_SEQUENCE\
+                    [insertion_sequence_position_being_checked:\
+                        (insertion_sequence_position_being_checked + 
+                         number_of_bases_absent)]
+            present_sequence = \
+                di.INSERTED_SEQUENCE\
+                    [:insertion_sequence_position_being_checked] + \
+                        di.INSERTED_SEQUENCE\
+                            [(insertion_sequence_position_being_checked +
+                              number_of_bases_absent):]
+    
+            insertion_positions = \
+                find_prefix_suffix_in_plateau(plateau, present_sequence)
+            
+            for position in insertion_positions:
+            
+                new_row = pd.Series({"Sequence_name" : \
+                    (plateau["Gene_name"] + " " + plateau["Chromosome"] +
+                     " " + plateau["Strand"] + " "  + str(plateau["Start"]) +
+                     "-" + str(plateau["End"])),
+                    "Insertion_sequence" : absent_sequence,
+                    "Insertion_location" : (position + \
+                        insertion_sequence_position_being_checked),
+                    "Plateau_sequence" : plateau["Sequence"]})
+                new_df = pd.DataFrame([new_row])
+                plateau_specific_suggested_insertion_sites = \
+                    pd.concat(\
+                        [plateau_specific_suggested_insertion_sites, new_df],
+                        axis = 0, ignore_index = True)
+                
+                if len(plateau_specific_suggested_insertion_sites.index) > \
+                    di.PARTIAL_INSERTIONS_PER_REGION:
+                    
+                    possible_plateau_insertions = \
+                        pd.concat([possible_plateau_insertions, \
+                            plateau_specific_suggested_insertion_sites], \
+                                axis = 0, ignore_index = True)
+                    
+                    break
+    
+def find_prefix_suffix_in_plateau(plateau, present_sequence):
+    
+    #Searches plateau sequences for partial insertion sequences
+    
+    insertions = \
+        re.finditer(pattern = present_sequence, string = plateau["Sequence"])
+    insertion_positions = [index.start() for index in insertions]
+    
+    return insertion_positions
+
+def insert_insertion_sequence(row):
+    
+    #Adds missing insertion sequence into partial insertions found in plateaus
+    
+    return (row["Plateau_sequence"][:row["Insertion_location"]] + 
+                "(+" +
+                row["Insertion_sequence"] +
+                ")" + 
+                row["Plateau_sequence"][row["Insertion_location"]:])
+        
