@@ -7,6 +7,7 @@ import data_visualisation as dv
 import data_exportation as de
 
 merge_on_column = "Gene_name"
+how_to_merge = "inner"
 element_type = "Enhancer"
 
 def main():
@@ -28,16 +29,13 @@ def main():
     gene_data = fm.find_interferring_genes(gene_data)
     gene_data = fm.find_search_windows(gene_data)
     
-    regulatory_elements = di.read_regulatory_elements()
-    enhancers = di.clean_regulatory_elements(regulatory_elements, element_type)
-    del regulatory_elements
+    enhancers = di.read_regulatory_elements()
     
     enhancer_overlaps = \
         fm.find_element_overlaps_within_search_window(enhancers, gene_data)
     del enhancers
     
-    gene_data = \
-        fm.count_overlaps_per_gene(gene_data, enhancer_overlaps, element_type)
+    gene_data = fm.count_overlaps_per_gene(gene_data, enhancer_overlaps, element_type)
     gene_data = fm.find_nearby_enhancer_densities(gene_data, enhancer_overlaps)
     gene_data = fm.find_symmetry_of_elements(gene_data, enhancer_overlaps)
     gene_data = fm.calculate_interest_score(gene_data)
