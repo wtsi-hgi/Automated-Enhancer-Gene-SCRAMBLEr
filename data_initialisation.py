@@ -2,8 +2,13 @@ import sys
 import json
 import re
 import pandas as pd
+import numpy as np
 
 import find_metrics as fm
+
+element_type = "Enhancer"
+geneNameRegex = "gene_name \"(.*?)\""
+geneBiotypeRegex = "gene_biotype \"(.*?)\""
 
 def read_config_file():
     
@@ -74,6 +79,7 @@ def read_config_file():
     
     global INSERTED_SEQUENCE
     global PARTIAL_INSERTIONS_PER_REGION
+
    
     try:
         
@@ -163,6 +169,7 @@ def read_config_file():
         PLATEAU_THRESHOLD = settings["plateau_threshold"]
         
         INSERTED_SEQUENCE = settings["inserted_sequence"]
+
         PARTIAL_INSERTIONS_PER_REGION = \
             settings["partial_insertion_per_region"]
             
@@ -202,26 +209,15 @@ def clean_genes(gene_annotations):
     
     print("Cleaning gene data...")
     
-    gene_annotations = gene_annotations.loc[gene_annotations["Chromosome"].
-                                            isin(CHROMOSOMES_OF_INTEREST)]
-    gene_annotations = gene_annotations\
-        .drop(gene_annotations[gene_annotations["Type"] != "gene"].index)
-    gene_annotations["Gene_biotype"] = gene_annotations["Attributes"]\
-        .apply(lambda x : re.findall("gene_biotype \"(.*?)\"", x)[0] if \
-            re.search("gene_name \"(.*?)\"", x) != None else "None")
-    gene_annotations = gene_annotations\
-        .drop(gene_annotations[gene_annotations["Gene_biotype"] != \
-            "protein_coding"].index)
-    gene_annotations["Gene_name"] = gene_annotations["Attributes"]\
-        .apply(lambda x : re.findall("gene_name \"(.*?)\"", x)[0] if\
-            re.search("gene_name \"(.*?)\"", x) != None else "None")
-    gene_annotations = gene_annotations.drop(["Source", "Type", "Score",
-                                              "Phase", "Attributes",
-                                              "Gene_biotype"], axis = 1)
-    gene_annotations = gene_annotations.\
-        drop_duplicates(keep = False, subset = ["Gene_name"])
-    gene_annotations = gene_annotations\
-        .rename(columns = {"Start" : "Gene_start", "End" : "Gene_end"})
+    gene_annotations = gene_annotations.query('Chromosome in @CHROMOSOMES_OF_INTEREST')
+    gene_annotations = gene_annotations[gene_annotations["Type"] == "gene"]
+    gene_annotations["Gene_biotype"] = gene_annotations["Attributes"].apply(lambda x : re.findall(geneBiotypeRegex, x)[0] if re.search(geneNameRegex, x) != None else "None")
+    gene_annotations = gene_annotations[gene_annotations["Gene_biotype"] == "protein_coding"]
+    gene_annotations["Gene_name"] = gene_annotations["Attributes"].apply(lambda x : re.findall(geneNameRegex, x)[0] if re.search(geneNameRegex, x) != None else "None")
+ 
+    gene_annotations = gene_annotations.drop(["Source", "Type", "Score", "Phase", "Attributes", "Gene_biotype"], axis = 1)
+    gene_annotations = gene_annotations.drop_duplicates(keep = False, subset = ["Gene_name"])
+    gene_annotations = gene_annotations.rename(columns = {"Start" : "Gene_start", "End" : "Gene_end"})
     
     return gene_annotations
 
@@ -299,13 +295,13 @@ def clean_specific_expression_data(specific_expression_data):
     
     print("Cleaning specific expression data...")
     
-    specific_expression_data["Specific_gene_expression"] = \
-        specific_expression_data["Specific_gene_expression"].\
-            apply(lambda expression : \
-                0 if expression == "-Inf" else pow(2, expression))
-    specific_expression_data = \
-        specific_expression_data.\
-            drop_duplicates(keep = False, subset = ["Gene_name"])
+    specific_expression_data["Specific_gene_expression"] = np.where(
+        specific_expression_data["Specific_gene_expression"] == "-Inf",
+        0,
+        np.power(2, specific_expression_data["Specific_gene_expression"])
+    )
+    specific_expression_data = specific_expression_data.drop_duplicates(keep = False, subset = ["Gene_name"])
+
     
     return specific_expression_data     
    
@@ -321,7 +317,7 @@ def read_regulatory_elements():
                         sep = "\t",
                         names = ["Chromosome", "Start", "End", "Flag"])
         
-        return regulatory_elements    
+        return clean_regulatory_elements(regulatory_elements, element_type)
     
     except:
         print("ERROR: Could not read regulatory elements file.")
@@ -343,8 +339,8 @@ def clean_regulatory_elements(regulatory_elements, element_type):
         
     else: print("ERROR : Unrecognised regulatory element type.")
         
-    regulatory_elements["Chromosome"] = regulatory_elements["Chromosome"].\
-        apply(lambda x : x[3:])
+    regulatory_elements["Chromosome"] = regulatory_elements["Chromosome"].str[3:]
+
     
     regulatory_elements = regulatory_elements[regulatory_elements["Flag"].\
         isin(flags_of_interest)]

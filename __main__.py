@@ -7,7 +7,6 @@ import data_visualisation as dv
 import data_exportation as de
 
 merge_on_column = "Gene_name"
-how_to_merge = "inner"
 element_type = "Enhancer"
 
 def main():
@@ -44,8 +43,7 @@ def main():
     gene_data = \
         rc.generate_step_function_of_overlaps(gene_data, enhancer_overlaps)
     gene_data = \
-        rc.convolve_step_function_to_average_windowed_density(gene_data,
-                                                              element_type)
+        rc.convolve_step_function_to_average_windowed_density(gene_data, element_type)
     del enhancer_overlaps
     
     gene_data = rc.find_plateaus(gene_data)
